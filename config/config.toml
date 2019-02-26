@@ -1,0 +1,13 @@
+[app]
+    url = "http://localhost"
+    addr = ":8080"
+
+[database]
+    name = "healthrobotdb"
+    driver = "mysql"
+    port = "3306"
+
+[mysql]
+    databaseUserName = "root"
+    databasePassword = "aiwac2019"
+
