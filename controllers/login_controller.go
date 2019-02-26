@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"HealthRobot/models"
-	"HealthRobot/services"
+	"HealthRobotServer/models"
+	"HealthRobotServer/services"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"

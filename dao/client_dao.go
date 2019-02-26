@@ -1,7 +1,7 @@
 package dao
 
 import (
-	"HealthRobot/models"
+	"HealthRobotServer/models"
 	"github.com/jinzhu/gorm"
 	"log"
 )

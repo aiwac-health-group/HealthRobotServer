@@ -1,6 +1,6 @@
 package services
 
-import "HealthRobot/models"
+import "HealthRobotServer/models"
 
 type TokenService interface {
 	UpdateToken(*models.Token) error

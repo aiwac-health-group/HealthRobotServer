@@ -1,9 +1,9 @@
 package main
 
 import (
-	"HealthRobot/controllers"
-	"HealthRobot/datasource"
-	"HealthRobot/services"
+	"HealthRobotServer/controllers"
+	"HealthRobotServer/datasource"
+	"HealthRobotServer/services"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"

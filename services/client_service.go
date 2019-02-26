@@ -1,9 +1,9 @@
 package services
 
 import (
-	"HealthRobot/dao"
-	"HealthRobot/datasource"
-	"HealthRobot/models"
+	"HealthRobotServer/dao"
+	"HealthRobotServer/datasource"
+	"HealthRobotServer/models"
 )
 
 type ClientService interface {
