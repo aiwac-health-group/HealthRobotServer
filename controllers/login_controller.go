@@ -12,11 +12,13 @@ import (
 
 type LoginController struct {
 	Ctx iris.Context
-	Service services.ClientService
+	Service services.LoginService
 }
 
 func (c *LoginController) BeforeActivation(b mvc.BeforeActivation)  {
-	b.Handle("GET","/loginWithPassword","LoginWithPassword")
+	b.Handle("POST","/loginWithPassword","LoginWithPassword")
+	b.Handle("POST", "/loginWithIdentifyCode", "LoginWithIdentifyCode")
+	b.Handle("Get","/getAccessToken","GetAccessToken")
 }
 
 //处理Web端用户通过工号和密码登录系统
@@ -44,7 +46,7 @@ func (c *LoginController) LoginWithPassword() {
 	}
 
 	//验证用户是否存在
-	if client := c.Service.GetByName(loginInfo.ClientID); client == nil {
+	if client := c.Service.GetClient(loginInfo.ClientID); client == nil {
 		_, _ = c.Ctx.JSON(models.LoginResponse{
 			BaseResponse:models.BaseResponse{
 				ErrorCode:"400",
@@ -59,6 +61,7 @@ func (c *LoginController) LoginWithPassword() {
 				"clientID":loginInfo.ClientID,
 			})
 			tokenString, _ := token.SignedString([]byte("Aiwac Secert"))
+
 			_, _ = c.Ctx.JSON(models.LoginResponse{
 				BaseResponse:models.BaseResponse{
 					ErrorCode:"200",
@@ -67,6 +70,13 @@ func (c *LoginController) LoginWithPassword() {
 				ClientType:client.ClientType,
 				Token:tokenString,
 			})
+
+			//更新该用户的token
+			_ = c.Service.UpdateToken(&models.Token{
+				RawToken:tokenString,
+				ClientID:client.ID,
+			})
+
 		} else {
 			_, _ = c.Ctx.JSON(models.LoginResponse{
 				BaseResponse:models.BaseResponse{
@@ -77,5 +87,10 @@ func (c *LoginController) LoginWithPassword() {
 		}
 		return
 	}
+
+}
+
+//用于机器人APP获取Token以免登陆
+func (c *LoginController) GetAccessToken() {
 
 }

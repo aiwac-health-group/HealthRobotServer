@@ -17,9 +17,12 @@ func newApp() (api *iris.Application) {
 	})
 
 	mvc.Configure(api.Party("/login"), func(app *mvc.Application) {
-		//绑定数据库服务
-		app.Register(services.NewClientService())
+		app.Register(services.NewLoginService())
 		app.Handle(new(controllers.LoginController))
+	})
+
+	mvc.Configure(api.Party("/admin"), func(app *mvc.Application) {
+		app.Handle(new(controllers.AdminController))
 	})
 
 	return api

@@ -7,8 +7,8 @@ import (
 )
 
 type ClientService interface {
-	Creat(info *models.ClientInfo) error
-	GetByName(string) *models.ClientInfo
+	CreatClient(info *models.ClientInfo) error
+	GetClient(string) *models.ClientInfo
 }
 
 func NewClientService()  ClientService {
@@ -22,11 +22,11 @@ type clientService struct {
 }
 
 //创建新的用户数据
-func (service *clientService) Creat(info *models.ClientInfo) error {
+func (service *clientService) CreatClient(info *models.ClientInfo) error {
 	return service.dao.Insert(info)
 }
 
 //查询用户
-func (service *clientService) GetByName(name string) *models.ClientInfo {
+func (service *clientService) GetClient(name string) *models.ClientInfo {
 	return service.dao.Search(name)
 }
