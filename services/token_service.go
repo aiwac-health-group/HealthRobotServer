@@ -4,11 +4,13 @@ import (
 	"HealthRobotServer/dao"
 	"HealthRobotServer/datasource"
 	"HealthRobotServer/models"
+	"log"
 	"time"
 )
 
 type TokenService interface {
-	UpdateToken(*models.Token) error
+	CreatToken(*models.Token)
+	UpdateToken(*models.Token)
 	GetToken(string) *models.Token
 }
 
@@ -22,12 +24,23 @@ type tokenService struct {
 	dao *dao.TokenDao
 }
 
+func (service *tokenService) CreatToken(token *models.Token) {
+	token.CreatedAt = time.Now()
+	token.UpdatedAt = time.Now()
+	token.ExpressIn = time.Now().AddDate(0,0,1).Unix()
+	if err := service.dao.Insert(token); err != nil {
+		log.Println("token_service.go InsertToken() insert error: ", err)
+	}
+}
+
 func (service *tokenService) GetToken(raw string) *models.Token {
 	return service.dao.Search(raw)
 }
 
-func (service *tokenService) UpdateToken(token *models.Token) error {
+func (service *tokenService) UpdateToken(token *models.Token) {
 	token.ExpressIn = time.Now().AddDate(0,0,1).Unix()
 	token.UpdatedAt = time.Now()
-	return service.dao.Update(token)
+	if err := service.dao.Update(token); err != nil {
+		log.Println("token_service.go InsertToken() insert error: ", err)
+	}
 }

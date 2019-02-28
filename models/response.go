@@ -1,12 +1,13 @@
 package models
 
 type BaseResponse struct {
-	ErrorCode string `json:"errorCode"`
-	ErrorDesc string `json:"errorDesc"`
+	Status string `json:"status"`
+	Message string `json:"message"`
 }
 
 type LoginResponse struct {
-	BaseResponse
-	ClientType string `json:"clientType,omitempty"`
+	LoginFlag string `json:"loginFlag"`
+	ClientName string `json:"userName,omitempty"`
+	ClientType string `json:"userFlag,omitempty"`
 	Token string `json:"token,omitempty"`
 }

@@ -29,6 +29,7 @@ func Instance() *gorm.DB {
 		log.Fatal("dbhelper.Instance error",err)
 		return nil
 	}
+
 	engine = db
 	return engine
 }

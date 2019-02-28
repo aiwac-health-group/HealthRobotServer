@@ -4,11 +4,14 @@ import (
 	"HealthRobotServer/dao"
 	"HealthRobotServer/datasource"
 	"HealthRobotServer/models"
+	"log"
+	"time"
 )
 
 type ClientService interface {
-	CreatClient(info *models.ClientInfo) error
+	CreatClient(*models.ClientInfo) error
 	GetClient(string) *models.ClientInfo
+	UpdateClient(*models.ClientInfo)
 }
 
 func NewClientService()  ClientService {
@@ -27,6 +30,14 @@ func (service *clientService) CreatClient(info *models.ClientInfo) error {
 }
 
 //查询用户
-func (service *clientService) GetClient(name string) *models.ClientInfo {
-	return service.dao.Search(name)
+func (service *clientService) GetClient(account string) *models.ClientInfo {
+	return service.dao.Search(account)
+}
+
+//更新用户数据
+func (service *clientService) UpdateClient(info *models.ClientInfo) {
+	info.UpdatedAt = time.Now()
+	if err := service.dao.Update(info); err != nil {
+		log.Println("client_service.go UpdateClient() insert error: ", err)
+	}
 }

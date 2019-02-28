@@ -2,8 +2,8 @@ package models
 
 type Token struct {
 	Base
-	RawToken string `gorm:"column:raw_token;varchar(128);not null;"`
-	ClientID int64 `gorm:"column:client_id;not null;"`
-	ClientType string `gorm:"column:client_type;not null"`
+	RawToken string `gorm:"column:raw_token;varchar(128);not null;unique"`
+	ClientAccount string `gorm:"column:client_account;varchar(11);not null;unique"`
+	ClientType string `gorm:"column:client_type;varchar(7);not null"`
 	ExpressIn int64 `gorm:"column:express_in"`
 }
