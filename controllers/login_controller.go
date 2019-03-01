@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"HealthRobotServer/middleware"
 	"HealthRobotServer/models"
 	"HealthRobotServer/services"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
 	"log"
@@ -62,10 +62,7 @@ func (c *LoginController) LoginWithPassword() {
 	} else {
 		if strings.EqualFold(loginInfo.Password, client.ClientPassword) {
 			//密码正确,生成token返回至用户,并更新数据库中的token
-			jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
-				"Account":loginInfo.Account,
-			})
-			tokenString, _ := jwtToken.SignedString([]byte("HealthRobot Secret"))
+			tokenString := middleware.GenerateToken(client.ClientAccount, client.ClientType)
 
 			_, _ = c.Ctx.JSON(models.LoginResponse{
 				LoginFlag:"success",
@@ -75,7 +72,8 @@ func (c *LoginController) LoginWithPassword() {
 			})
 
 			//获取该用户的token，如果为空则创建新的token，否则更新该用户的token
-			token := c.Service.GetToken(tokenString)
+			//目前在数据库中有存储token，由于jwt token的可解析性，如果对性能影响大，可以考虑放弃存储
+			token := c.Service.GetToken(client.ClientAccount)
 			if token == nil {
 				c.Service.CreatToken(&models.Token{
 					RawToken:tokenString,

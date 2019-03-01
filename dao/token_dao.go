@@ -27,7 +27,7 @@ func (d *TokenDao) Insert(token *models.Token) error {
 	}
 
 	if err := d.engine.Table("token_info").Create(token).Error; err != nil {
-		log.Fatal("token_dao.go Insert() insert error",err)
+		log.Fatal("token_dao.go Insert() insert error: ",err)
 		return err
 	}
 	log.Println("token_dao.go Insert() Insert token info successfully")
@@ -43,15 +43,15 @@ func (d *TokenDao) Update(token *models.Token) error {
 	return nil
 }
 
-func (d *TokenDao) Search(raw string) *models.Token {
+func (d *TokenDao) Search(account string) *models.Token {
 	var token = models.Token{
 		Base:models.Base{
 			ID:0,
 		},
 	}
-	d.engine.Table("token_info").Where("raw_token = ?",raw).Find(&token)
+	d.engine.Table("token_info").Where("client_account = ?",account).Find(&token)
 	if token.ID == 0 {
-		log.Println("token_dao.go Search() the token does not exist yet")
+		log.Println("token_dao.go Search() the client does not own a token yet")
 		return nil
 	}
 	return &token

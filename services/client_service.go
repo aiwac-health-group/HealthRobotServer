@@ -12,6 +12,7 @@ type ClientService interface {
 	CreatClient(*models.ClientInfo) error
 	GetClient(string) *models.ClientInfo
 	UpdateClient(*models.ClientInfo)
+	GetOnlineDoctor() []models.ClientInfo
 }
 
 func NewClientService()  ClientService {
@@ -32,6 +33,11 @@ func (service *clientService) CreatClient(info *models.ClientInfo) error {
 //查询用户
 func (service *clientService) GetClient(account string) *models.ClientInfo {
 	return service.dao.Search(account)
+}
+
+//查询在线的医生用户
+func (service *clientService) GetOnlineDoctor() []models.ClientInfo {
+	return service.dao.GetAll()
 }
 
 //更新用户数据

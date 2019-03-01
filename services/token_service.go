@@ -33,8 +33,8 @@ func (service *tokenService) CreatToken(token *models.Token) {
 	}
 }
 
-func (service *tokenService) GetToken(raw string) *models.Token {
-	return service.dao.Search(raw)
+func (service *tokenService) GetToken(account string) *models.Token {
+	return service.dao.Search(account)
 }
 
 func (service *tokenService) UpdateToken(token *models.Token) {

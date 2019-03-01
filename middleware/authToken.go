@@ -40,22 +40,17 @@ func (m *AuthToken) Serve(ctx iris.Context) {
 }
 
 func (m *AuthToken) CheckJWT(ctx iris.Context) error {
+	log.Println("check client authorization")
 	var jwtToken *jwt.Token
 	if value := ctx.Values().Get("jwt"); value != nil {
 		jwtToken = value.(*jwt.Token)
-	}
-
-	var token *models.Token
-	if jwtToken == nil { //从GET请求参数中获取token串（针对websocket连接情况)
-		tokenString := ctx.FormValue("token")
-		token = m.Service.GetToken(tokenString)
-	} else { //从HTTP请求头获取（针对http请求情况）
-		token = m.Service.GetToken(jwtToken.Raw)
-	}
-	if token != nil && token.ExpressIn > time.Now().Unix() {
-		log.Println("authorized client access")
-		//后期还可以根据请求url来判断用户是否有访问该页面的权限，比如只有管理员用户可以访问/admin路由下的资源，避免错误
-		return nil
+		claims := jwtToken.Claims.(jwt.MapClaims)
+		token := m.Service.GetToken(claims["Account"].(string))
+		if token != nil && token.ExpressIn > time.Now().Unix() {
+			log.Println("authorized client access")
+			//后期还可以根据请求url来判断用户是否有访问该页面的权限，比如只有管理员用户可以访问/admin路由下的资源，避免错误
+			return nil
+		}
 	}
 	return errors.New("unauthorized")
 }

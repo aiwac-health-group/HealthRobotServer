@@ -11,3 +11,12 @@ type LoginResponse struct {
 	ClientType string `json:"userFlag,omitempty"`
 	Token string `json:"token,omitempty"`
 }
+
+type WebsocketResponse struct {
+	Code string `json:"code"`
+	Data List `json:"data"`
+}
+
+type List struct {
+	Items []ClientInfo `json:"items"`
+}

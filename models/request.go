@@ -17,3 +17,9 @@ type AccountModifyRequest struct {
 	OperationType string `json:"type"`
 	Value string `json:"value"`
 }
+
+//websocket请求
+type WSRequest struct {
+
+}
+

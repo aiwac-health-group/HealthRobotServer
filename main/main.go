@@ -8,12 +8,14 @@ import (
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
 	"github.com/kataras/iris/websocket"
+	"log"
 )
 
 func newApp() (api *iris.Application) {
 	api = iris.New()
 
 	iris.RegisterOnInterrupt(func() {
+		log.Println("the server is closing")
 		datasource.Instance().Close()
 	})
 
@@ -34,6 +36,7 @@ func newApp() (api *iris.Application) {
 
 	mvc.Configure(api.Party("/ws"), func(app *mvc.Application) {
 		ws := websocket.New(websocket.Config{})
+		app.Register(services.NewWebsocketService())
 		app.Register(ws.Upgrade)
 		app.Handle(new(controllers.WebsocketController))
 	})
@@ -43,5 +46,9 @@ func newApp() (api *iris.Application) {
 
 func main() {
 	app := newApp()
-	_ = app.Run(iris.Addr(":8080"))
+
+	go app.Run(iris.Addr(":8080"), iris.WithoutInterruptHandler)
+	//开启新服务器，websocket监听8082端口
+	app.Run(iris.Addr(":8082"), iris.WithoutInterruptHandler)
+
 }
