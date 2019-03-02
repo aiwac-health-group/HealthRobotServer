@@ -13,7 +13,7 @@ type LoginResponse struct {
 }
 
 type WebsocketResponse struct {
-	Code string `json:"code"`
+	Code int `json:"code"`
 	Data List `json:"data"`
 }
 

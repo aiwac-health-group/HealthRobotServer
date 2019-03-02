@@ -18,8 +18,10 @@ type AccountModifyRequest struct {
 	Value string `json:"value"`
 }
 
-//websocket请求
-type WSRequest struct {
-
+//浏览器的websocket请求
+type WSExploreRequest struct {
+	RequestType string `json:"type"`
+	Method string `json:"method"`
+	Token string `json:"token"`
 }
 

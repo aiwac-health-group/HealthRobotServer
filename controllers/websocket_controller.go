@@ -10,6 +10,8 @@ import (
 	"github.com/kataras/iris/mvc"
 	"github.com/kataras/iris/websocket"
 	"log"
+	"strings"
+	"unsafe"
 )
 
 type WebsocketController struct {
@@ -52,13 +54,7 @@ func (c *WebsocketController) Join() {
 	//如果上线用户为医生
 	//获取在线医生列表,并将列表推送给所有的客服
 	if clientType == "doctor" {
-		doctors := c.Service.GetOnlineDoctor()
-		data, _ := json.Marshal(models.WebsocketResponse{
-			Code: "2009",
-			Data: models.List{
-				Items: doctors,
-			},
-		})
+		data := c.GetDoctorList()
 		log.Printf("response data %s: ", data)
 		_ = c.Conn.To("service").EmitMessage(data)
 	}
@@ -73,15 +69,10 @@ func (c *WebsocketController) LoseConnection() {
 		ClientAccount:account,
 		OnlineStatus:"1",
 	})
+
 	//如果离开的用户为doctor，则更新客服的在线医生列表
 	if clientType == "doctor" {
-		doctors := c.Service.GetOnlineDoctor()
-		data, _ := json.Marshal(models.WebsocketResponse{
-			Code: "2009",
-			Data: models.List{
-				Items: doctors,
-			},
-		})
+		data := c.GetDoctorList()
 		log.Printf("response data %s: ", data)
 		_ = c.Conn.To("service").EmitMessage(data)
 	}
@@ -90,6 +81,33 @@ func (c *WebsocketController) LoseConnection() {
 
 func (c *WebsocketController) ReceiveRequest(data []byte) {
 	//在这里解析收到的请求，根据请求中的业务号跳转到指定业务处理函数中进行处理
+	var request models.WSExploreRequest
+	if err := json.Unmarshal(data, &request); err != nil {
+		log.Println("Websocket request from Explore Unmarshal err: ",err)
+	}
+	log.Println("Websocket request from Explore: ",request)
 
+	if unsafe.Sizeof(request) == 0 { //空请求
+		return
+	}
+
+	//对于web端的socket请求，根据request中的method字段配置相应的函数处理
+	if strings.EqualFold(request.Method, "getDoctorList") {
+		_ = c.Conn.Write(1, c.GetDoctorList())
+	}
+
+}
+
+//web端获取在线医生列表业务处理
+func (c *WebsocketController) GetDoctorList() []byte {
+	doctors := c.Service.GetOnlineDoctor()
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: 2009,
+		Data: models.List{
+			Items: doctors,
+		},
+	})
+	log.Printf("doctorList: %s", data)
+	return data
 }
 

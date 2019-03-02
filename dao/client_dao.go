@@ -40,7 +40,7 @@ func (d *ClientDao) Get(id int) *models.ClientInfo {
 //返回在线医生列表
 func (d *ClientDao) GetAll() []models.ClientInfo {
 	var clients []models.ClientInfo
-	d.engine.Table("client_info").Where("online_status = ? AND client_type = ?","1", "doctor").Find(&clients)
+	d.engine.Table("client_info").Where("online_status = ? AND client_type = ?","2", "doctor").Find(&clients)
 	if clients == nil {
 		log.Println("client_dao.go GetAll() no doctor is online")
 	}
