@@ -18,10 +18,9 @@ type AccountModifyRequest struct {
 	Value string `json:"value"`
 }
 
-//浏览器的websocket请求
-type WSExploreRequest struct {
-	RequestType string `json:"type"`
-	Method string `json:"method"`
-	Token string `json:"token"`
+//websocket请求
+type WSRequest struct {
+	BusinessCode string `json:"code"`
+	Message string `json:"message"`
+	//可在下方扩展字段，比如uuid,time,要查询的字段，允许为空
 }
-

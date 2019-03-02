@@ -3,6 +3,7 @@ package main
 import (
 	"HealthRobotServer/controllers"
 	"HealthRobotServer/datasource"
+	"HealthRobotServer/manager"
 	"HealthRobotServer/services"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/kataras/iris"
@@ -34,9 +35,16 @@ func newApp() (api *iris.Application) {
 		app.Handle(new(controllers.AdminController))
 	})
 
+	mvc.Configure(api.Party("/service"), func(app *mvc.Application) {
+		app.Register(manager.WSInstance())
+		app.Register(manager.CRInstance())
+		app.Handle(new(controllers.ServiceController))
+	})
+
 	mvc.Configure(api.Party("/ws"), func(app *mvc.Application) {
 		ws := websocket.New(websocket.Config{})
 		app.Register(services.NewWebsocketService())
+		app.Register(manager.WSInstance())
 		app.Register(ws.Upgrade)
 		app.Handle(new(controllers.WebsocketController))
 	})

@@ -33,10 +33,11 @@ func JwtHandlerWS() *jwtmiddleware.Middleware {
 	})
 }
 
-func GenerateToken(account string, clientType string) string {
+func GenerateToken(account string, clientType string, clientName string) string {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
 		"Account":account,
 		"ClientType":clientType,
+		"ClientName":clientName,
 		"ExpressIn":time.Now().Unix(),
 	})
 	tokenString, _ := jwtToken.SignedString([]byte("HealthRobot Secret"))

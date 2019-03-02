@@ -5,29 +5,29 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-//TreatDao定义了在线问诊处理列表的相关数据库操作
+//TreatInfoDao定义了在线问诊处理列表的相关数据库操作
 
-type TreatDao struct {
+type TreatInfoDao struct {
 	engine *gorm.DB
 }
 
-func NewTreatMessageDao(engine *gorm.DB) *TreatDao {
-	return &TreatDao{
+func NewTreatInfoDao(engine *gorm.DB) *TreatInfoDao {
+	return &TreatInfoDao{
 		engine:engine,
 	}
 }
 
-//删除处理完成的问诊请求
-func (d *TreatDao) Delete(treat *models.Treat) {
+//更新问诊请求的状态
+func (d *TreatInfoDao) Update(TreatInfo *models.TreatInfo) {
 
 }
 
 //插入新的问诊请求
-func (d *TreatDao) Insert(treat *models.Treat) {
+func (d *TreatInfoDao) Insert(TreatInfo *models.TreatInfo) {
 
 }
 
-//返回未处理的请求
-func (d *TreatDao) GetList() []models.Treat {
+//返回满足状态条件的问诊列表
+func (d *TreatInfoDao) GetList(status string) []models.TreatInfo {
 	return nil
 }
