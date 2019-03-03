@@ -15,12 +15,12 @@ type TreatInfoService interface {
 }
 
 type treatInfoService struct {
-	dao *dao.TreatInfoDao
+	dao *dao.Dao
 }
 
 func NewTreatInfoService() TreatInfoService {
 	return &treatInfoService{
-		dao:dao.NewTreatInfoDao(datasource.Instance()),
+		dao:dao.NewDao(datasource.Instance()),
 	}
 }
 

@@ -30,7 +30,7 @@ func (c *AdminController) AddService() {
 		log.Println("fail to encode request")
 		return
 	}
-	err := c.Service.CreatClient(&models.ClientInfo{
+	err := c.Service.CreatClientInfo(&models.ClientInfo{
 		ClientAccount:request.Account,
 		ClientName:request.Name,
 		ClientPassword:request.Password,
@@ -62,7 +62,7 @@ func (c *AdminController) AddDoctor() {
 		return
 	}
 
-	err := c.Service.CreatClient(&models.ClientInfo{
+	err := c.Service.CreatClientInfo(&models.ClientInfo{
 		ClientAccount:request.Account,
 		ClientName:request.Name,
 		ClientPassword:request.Password,
@@ -95,7 +95,7 @@ func (c *AdminController) ModifyClientAccount() {
 	}
 
 	//判断账号是否存在
-	if client := c.Service.GetClient(request.Account); client == nil {
+	if client := c.Service.SearchClientInfo(request.Account); client == nil {
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account doest not exist",
@@ -103,16 +103,23 @@ func (c *AdminController) ModifyClientAccount() {
 		return
 	} else {
 		if strings.EqualFold(request.OperationType, "changPass") { //修改密码
-			c.Service.UpdateClient(&models.ClientInfo{
+			err := c.Service.UpdateClientInfo(&models.ClientInfo{
 				ClientAccount:request.Account,
 				ClientPassword:request.Value,
 			})
+			if err != nil {
+
+			}
 		} else { //修改账户姓名
-			c.Service.UpdateClient(&models.ClientInfo{
+			err := c.Service.UpdateClientInfo(&models.ClientInfo{
 				ClientAccount:request.Account,
 				ClientName:request.Value,
 			})
+			if err != nil {
+
+			}
 		}
 	}
-
 }
+
+//管理员修改医生信息

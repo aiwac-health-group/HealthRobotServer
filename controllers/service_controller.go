@@ -11,6 +11,7 @@ import (
 	"strconv"
 )
 
+//service controller处理客服发出的http请求
 type ServiceController struct {
 	Ctx iris.Context
 	WsManager manager.WSManager

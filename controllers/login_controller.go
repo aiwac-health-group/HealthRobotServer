@@ -54,7 +54,7 @@ func (c *LoginController) LoginWithPassword() {
 	}
 
 	//根据账号验证用户是否存在
-	if client := c.Service.GetClient(loginInfo.Account); client == nil {
+	if client := c.Service.SearchClientInfo(loginInfo.Account); client == nil {
 		_, _ = c.Ctx.JSON(models.LoginResponse{
 			LoginFlag:"failed",
 		})

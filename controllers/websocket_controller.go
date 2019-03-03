@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	BusinessRobotProfile = 6
 	BusinessTreatRequest = 17 //机器人发起问诊请求
 	BusinessOnlineDoctor = 2009 //客服获取在线医生列表
 )
@@ -58,7 +59,7 @@ func (c *WebsocketController) Join() {
 	c.WsManager.AddMapRelationship(account,&(c.Conn))
 
 	//更新用户状态为在线
-	c.Service.UpdateClient(&models.ClientInfo{
+	c.Service.UpdateClientInfo(&models.ClientInfo{
 		ClientAccount:account,
 		OnlineStatus:"2",
 	})
@@ -78,7 +79,7 @@ func (c *WebsocketController) LoseConnection() {
 	c.WsManager.DeleteMapRelationship(account)
 
 	//更新用户状态
-	c.Service.UpdateClient(&models.ClientInfo{
+	c.Service.UpdateClientInfo(&models.ClientInfo{
 		ClientAccount:account,
 		OnlineStatus:"1",
 	})
@@ -106,34 +107,13 @@ func (c *WebsocketController) ReceiveRequest(data []byte) {
 	businessCode, _ := strconv.Atoi(request.BusinessCode)
 
 	switch businessCode {
-	case BusinessOnlineDoctor: c.DoctorListRequestHandler(&request)
+	case BusinessRobotProfile: c.RobotProfileHandler(&request)
 	case BusinessTreatRequest: c.TreatRequestHandler(&request)
+	case BusinessOnlineDoctor: c.DoctorListRequestHandler(&request)
+
 
 	}
 }
-
-//2009号业务处理
-//获取在线医生账号
-func (c *WebsocketController) SendOnlineDoctorList() {
-	doctors := c.Service.GetOnlineDoctor()
-	var items []interface{}
-	for _, value := range doctors {
-		items = append(items, value)
-	}
-	data, _ := json.Marshal(models.WebsocketResponse{
-		Code: "2009",
-		Data: models.List{
-			Items: items,
-		},
-	})
-	log.Printf("doctorList: %s", data)
-	_ = c.Conn.To("service").EmitMessage(data)
-}
-
-func (c *WebsocketController) DoctorListRequestHandler(request *models.WSRequest) {
-	c.SendOnlineDoctorList()
-}
-
 
 //17号业务处理
 //处理用户发起的问诊请求
@@ -158,3 +138,32 @@ func (c *WebsocketController) TreatRequestHandler(request *models.WSRequest) {
 	_ = c.Conn.To("service").EmitMessage(data)
 }
 
+//6号业务处理
+//处理机器人用户发起的个人信息注册及修改
+
+func (c *WebsocketController) RobotProfileHandler(request *models.WSRequest) {
+
+}
+
+
+//2009号业务处理
+//获取在线医生账号
+func (c *WebsocketController) SendOnlineDoctorList() {
+	doctors := c.Service.GetOnlineDoctor()
+	var items []interface{}
+	for _, value := range doctors {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "2009",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("doctorList: %s", data)
+	_ = c.Conn.To("service").EmitMessage(data)
+}
+
+func (c *WebsocketController) DoctorListRequestHandler(request *models.WSRequest) {
+	c.SendOnlineDoctorList()
+}
