@@ -1,36 +1,21 @@
 package services
 
 import (
+	"HealthRobotServer/constants"
 	"HealthRobotServer/dao"
 	"HealthRobotServer/datasource"
 	"HealthRobotServer/models"
 	"log"
 )
 
-const (
-	outline = "1"
-	online = "2"
-	onbusy = "3"
-)
-
-const (
-	table_clientInfo = "client_info"
-	table_doctor = "doctor_profile"
-	table_robot = "robot_profile"
-)
-
-const  (
-	query_account = "client_account = ?"
-	query_online_status = "online_status = ? AND client_type = ?"
-)
-
 type ClientService interface {
-	CreatClientInfo(*models.ClientInfo) error
 	SearchClientInfo(string) *models.ClientInfo
+	SearchWebClientProfile(string) *models.WebClient
+	SearchRobotProfile(string) *models.Robot
+	GetOnlineDoctor() []models.DoctorItem
 	UpdateClientInfo(*models.ClientInfo) error
-	GetOnlineDoctor() []models.ClientInfo
-	UpdateDoctor(*models.Doctor) error
-	UpdateRobot(*models.Robot) error
+	UpdateWebClientProfile(*models.WebClient) error
+	UpdateRobotProfile(*models.Robot) error
 }
 
 func NewClientService()  ClientService {
@@ -43,96 +28,89 @@ type clientService struct {
 	dao *dao.Dao
 }
 
-//创建用户摘要数据
-func (service *clientService) CreatClientInfo(info *models.ClientInfo) error {
-	err := service.dao.Insert(table_clientInfo, info)
-	if err != nil {
-		log.Printf("client_service.go Fails to creat client info")
-	}
-	return err
-}
-
 //查询用户摘要信息
 func (service *clientService) SearchClientInfo(account string) *models.ClientInfo {
 	var info models.ClientInfo
-	condition := []interface{}{1:account}
-	_ = service.dao.Search(&info, table_clientInfo, query_account, condition)
+	_ = service.dao.Search(&info, constants.Table_clientInfo, constants.Query_account, account)
 	return &info
 }
 
+//获取web用户详细信息
+func (service *clientService) SearchWebClientProfile(account string) *models.WebClient {
+	var profile models.WebClient
+	_ = service.dao.Search(&profile, constants.Table_webClient, constants.Query_account, account)
+	return &profile
+}
+
+//获取robot用户详细信息
+func (service *clientService) SearchRobotProfile(account string) *models.Robot  {
+	var profile models.Robot
+	_ = service.dao.Search(&profile, constants.Table_robot, constants.Query_account, account)
+	return &profile
+}
+
 //查询在线的医生列表
-func (service *clientService) GetOnlineDoctor() []models.ClientInfo {
-	var doctors []models.ClientInfo
-	service.dao.GetList(doctors,table_clientInfo,query_online_status,online,"doctor")
+func (service *clientService) GetOnlineDoctor() []models.DoctorItem {
+	var doctors []models.DoctorItem
+	service.dao.Engine.Table(constants.Table_webClient).Select("web_profile.client_name, web_profile.client_account, web_profile.department").Joins("inner join client_info on web_profile.client_account = client_info.client_account").Where("client_info.client_type = ? AND client_info.online_status = ?", "doctor", "2").Find(&doctors)
 	return doctors
 }
 
-//更新用户摘要信息
-func (service *clientService) UpdateClientInfo(newInfo *models.ClientInfo) error {
-	service.dao.TransactionBegin()
-	err := service.dao.Update(newInfo, table_clientInfo, query_account, newInfo.ClientAccount)
-	if err != nil {
-		service.dao.RollBack()
-		return err
+//添加或更新用户摘要信息
+func (service *clientService) UpdateClientInfo(info *models.ClientInfo) error {
+	var oldInfo models.ClientInfo
+	_ = service.dao.Search(&oldInfo, constants.Table_clientInfo, constants.Query_account, info.ClientAccount)
+	if oldInfo.ID == 0 {
+		if err := service.dao.Insert(constants.Table_clientInfo, info); err != nil {
+			log.Println("client_service.go Insert client info err")
+			return err
+		}
+		return nil
+	} else {
+		if err := service.dao.Update(info, constants.Table_clientInfo, constants.Query_account, info.ClientAccount); err != nil {
+			log.Println("client_service.go Update client info err")
+			return err
+		}
+		return nil
 	}
-	var newClientInfo = &models.ClientInfo{
-		ClientName:newInfo.ClientName,
-	}
-	err = service.dao.Update(newClientInfo, table_clientInfo, query_account, newInfo.ClientAccount)
-	if err != nil {
-		service.dao.RollBack()
-		return err
-	}
-	service.dao.Commit()
-	return err
 }
 
-//修改医生信息
-func (service *clientService) UpdateDoctor(newProfile *models.Doctor) error {
-	var oldProfile *models.Doctor
-	_ = service.dao.Search(oldProfile, table_doctor, query_account, newProfile.ClientAccount)
-	if oldProfile == nil { //不存在该医生的详细信息,则插入详细信息
-		_ = service.dao.Insert(table_doctor, newProfile)
-	} else { //否则更新医生详细信息，同时更新用户的摘要信息
-		service.dao.TransactionBegin()
-		err := service.dao.Update(newProfile, table_doctor, query_account, newProfile.ClientAccount)
-		if err != nil {
-			service.dao.RollBack()
+//添加或更新web用户个人信息
+func (service *clientService) UpdateWebClientProfile(newProfile *models.WebClient) error {
+	var oldProfile models.WebClient
+	_ = service.dao.Search(&oldProfile, constants.Table_webClient, constants.Query_account, newProfile.ClientAccount)
+	if oldProfile.ID == 0 { //不存在该工作人员的详细信息,则插入详细信息
+		log.Println("the client's profile does not exist, try to Insert")
+		if err := service.dao.Insert(constants.Table_webClient, newProfile); err != nil {
+			log.Println("client_service.go Insert doctor profile err")
 			return err
 		}
-		var newClientInfo = &models.ClientInfo{
-			ClientName:newProfile.ClientName,
-		}
-		err = service.dao.Update(newClientInfo, table_clientInfo, query_account, newProfile.ClientAccount)
-		if err != nil {
-			service.dao.RollBack()
+		return nil
+	} else { //否则更新医生详细信息
+		if err := service.dao.Update(newProfile, constants.Table_webClient, constants.Query_account, newProfile.ClientAccount); err != nil {
+			log.Println("client_service.go Update doctor profile err")
 			return err
 		}
-		service.dao.Commit()
+		return nil
 	}
 }
 
 //注册或修改机器人信息
-func (service *clientService) UpdateRobot(newProfile *models.Robot) error {
-	var oldProfile *models.Doctor
-	_ = service.dao.Search(oldProfile, table_robot, query_account, newProfile.ClientAccount)
-	if oldProfile == nil { //不存在该机器人的详细信息,则插入详细信息
-		_ = service.dao.Insert(table_robot, newProfile)
-	} else { //否则更新机器人详细信息，同时更新用户的摘要信息
-		service.dao.TransactionBegin()
-		err := service.dao.Update(newProfile, table_robot, query_account, newProfile.ClientAccount)
-		if err != nil {
-			service.dao.RollBack()
+func (service *clientService) UpdateRobotProfile(newProfile *models.Robot) error {
+	var oldProfile models.Robot
+	_ = service.dao.Search(&oldProfile, constants.Table_robot, constants.Query_account, newProfile.ClientAccount)
+	if oldProfile.ID == 0 { //不存在该机器人的详细信息,则插入详细信息
+		if err := service.dao.Insert(constants.Table_robot, newProfile); err != nil {
+			log.Println("client_service.go Insert robot profile err")
 			return err
 		}
-		var newClientInfo = &models.ClientInfo{
-			ClientName:newProfile.ClientName,
-		}
-		err = service.dao.Update(newClientInfo, table_robot, query_account, newProfile.ClientAccount)
-		if err != nil {
-			service.dao.RollBack()
+		return nil
+	} else { //否则更新机器人详细信息
+		if err := service.dao.Update(newProfile, constants.Table_robot, constants.Query_account, newProfile.ClientAccount); err != nil {
+			log.Println("client_service.go Update robot profile err")
 			return err
 		}
-		service.dao.Commit()
+		return nil
 	}
 }
+

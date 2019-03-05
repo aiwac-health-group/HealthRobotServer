@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"HealthRobotServer/models"
-	"HealthRobotServer/services"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
@@ -11,7 +10,6 @@ import (
 )
 
 type AuthToken struct {
-	Service services.TokenService
 	Config config
 }
 
@@ -20,9 +18,7 @@ type config struct {
 }
 
 func NewAuthToken () *AuthToken {
-	return &AuthToken{
-		Service:services.NewTokenService(),
-	}
+	return &AuthToken{}
 }
 
 func (m *AuthToken) Serve(ctx iris.Context) {
@@ -45,8 +41,8 @@ func (m *AuthToken) CheckJWT(ctx iris.Context) error {
 	if value := ctx.Values().Get("jwt"); value != nil {
 		jwtToken = value.(*jwt.Token)
 		claims := jwtToken.Claims.(jwt.MapClaims)
-		token := m.Service.GetToken(claims["Account"].(string))
-		if token != nil && token.ExpressIn > time.Now().Unix() {
+		expressIn := int64(claims["ExpressIn"].(float64))
+		if expressIn > time.Now().Unix() {
 			log.Println("authorized client access")
 			//后期还可以根据请求url来判断用户是否有访问该页面的权限，比如只有管理员用户可以访问/admin路由下的资源，避免错误
 			return nil

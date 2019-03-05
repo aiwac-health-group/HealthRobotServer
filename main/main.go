@@ -38,6 +38,7 @@ func newApp() (api *iris.Application) {
 	mvc.Configure(api.Party("/service"), func(app *mvc.Application) {
 		app.Register(manager.WSInstance())
 		app.Register(manager.CRInstance())
+		app.Register(services.NewServiceService())
 		app.Handle(new(controllers.ServiceController))
 	})
 

@@ -54,39 +54,27 @@ func (c *LoginController) LoginWithPassword() {
 	}
 
 	//根据账号验证用户是否存在
-	if client := c.Service.SearchClientInfo(loginInfo.Account); client == nil {
+	if clientInfo := c.Service.SearchClientInfo(loginInfo.Account); clientInfo.ID == 0 {
 		_, _ = c.Ctx.JSON(models.LoginResponse{
 			LoginFlag:"failed",
 		})
 		return
 	} else {
-		if strings.EqualFold(loginInfo.Password, client.ClientPassword) {
-			//密码正确,生成token返回至用户,并更新数据库中的token
-			tokenString := middleware.GenerateToken(client.ClientAccount, client.ClientType, client.ClientName)
+		if strings.EqualFold(loginInfo.Password, clientInfo.ClientPassword) {
+			//密码正确
+			//获取该用户的详细信息
+			profile := c.Service.SearchWebClientProfile(loginInfo.Account)
+
+			//生成token返回至用户,并更新数据库中的token
+			tokenString := middleware.GenerateToken(clientInfo.ClientAccount, clientInfo.ClientType)
 
 			_, _ = c.Ctx.JSON(models.LoginResponse{
 				LoginFlag:"success",
-				ClientType:client.ClientType,
-				ClientName:client.ClientName,
+				ClientType:profile.ClientType,
+				ClientName:profile.ClientName,
 				Token:tokenString,
 			})
 
-			////获取该用户的token，如果为空则创建新的token，否则更新该用户的token
-			////目前在数据库中有存储token，由于jwt token的可解析性，如果对性能影响大，可以考虑放弃存储
-			//token := c.Service.GetToken(client.ClientAccount)
-			//if token == nil {
-			//	c.Service.CreatToken(&models.Token{
-			//		RawToken:tokenString,
-			//		ClientType:client.ClientType,
-			//		ClientAccount:client.ClientAccount,
-			//	})
-			//} else {
-			//	//更新该用户账号下的token
-			//	c.Service.UpdateToken(&models.Token{
-			//		RawToken:tokenString,
-			//		ClientAccount:client.ClientAccount,
-			//	})
-			//}
 		} else {
 			_, _ = c.Ctx.JSON(models.LoginResponse{
 				LoginFlag:"failed",

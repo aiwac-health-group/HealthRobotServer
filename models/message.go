@@ -5,11 +5,11 @@ package models
 //问诊请求模型
 type TreatInfo struct {
 	Base
-	Account string
-	ClientName string
-	Others string
-	//问诊请求的处理状态，0表示未处理，1表示正在处理，2表示处理完成
-	Status string
+	Account string `gorm:"column:client_account;type:varchar(11);not null;" json:"account"`
+	ClientName string `gorm:"column:client_name;type:varchar(128);" json:"name"`
+	HandleDoctor string `gorm:"column:handle_doctor;type:varchar(11);default:-" json:"-"`
+	Others string `gorm:"column:others;type:varchar(128);" json:"others"`
+	Status string `gorm:"column:treat_status;default:0;type:varchar(1)" json:"-"` //问诊请求的处理状态，1表示未处理，2表示正在处理，3表示处理完成
 }
 
 //挂号请求模型
