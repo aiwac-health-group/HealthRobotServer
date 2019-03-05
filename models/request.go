@@ -7,6 +7,11 @@ type LoginRequest struct {
 	IdentifyCode string `json:"identifyCode"`
 }
 
+type TokenGetRequest struct {
+	Account string `json:"account"`
+	OldToken string `json:"oldToken"`
+}
+
 type AccountAddRequest struct {
 	Account string `json:"account"`
 	Name string `json:"name"`

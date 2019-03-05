@@ -12,6 +12,12 @@ type LoginResponse struct {
 	Token string `json:"token,omitempty"`
 }
 
+//向机器人用户返回新的token
+type TokenResponse struct {
+	BaseResponse
+	Token string `json:"token, omitempty"`
+}
+
 type WebsocketResponse struct {
 	Code string `json:"code"`
 	Data List `json:"data,omitempty"`

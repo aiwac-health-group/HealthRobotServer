@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"HealthRobotServer/constants"
 	"HealthRobotServer/middleware"
 	"HealthRobotServer/models"
 	"HealthRobotServer/services"
-	"fmt"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
 	"log"
@@ -20,7 +20,7 @@ func (c *LoginController) BeforeActivation(b mvc.BeforeActivation)  {
 	b.Handle("GET","/","Welcome")
 	b.Handle("POST","/","LoginWithPassword")
 	//b.Handle("POST", "/loginWithIdentifyCode", "LoginWithIdentifyCode")
-	b.Handle("GET","/getAccessToken","GetAccessToken")
+	b.Handle("GET","/getTokenString","GetAccessToken")
 }
 
 func (c *LoginController) Welcome() mvc.Result {
@@ -39,7 +39,7 @@ func (c *LoginController) LoginWithPassword() {
 	var loginInfo models.LoginRequest
 
 	if err := c.Ctx.ReadJSON(&loginInfo); err != nil {
-		fmt.Println("fail to encode request")
+		log.Println("fail to encode request")
 		return
 	}
 
@@ -87,5 +87,30 @@ func (c *LoginController) LoginWithPassword() {
 
 //用于机器人APP获取Token以免登陆
 func (c *LoginController) GetAccessToken() {
+	var request models.TokenGetRequest
+
+	if err := c.Ctx.ReadJSON(&request); err != nil {
+		log.Println("fail to encode request")
+		return
+	}
+
+	if err := middleware.JwtHandler().CheckJWT(c.Ctx); err != nil {
+		_, _ = c.Ctx.JSON(models.TokenResponse{
+			BaseResponse:models.BaseResponse{
+				Status:"2001",
+				Message:"非法用户",
+			},
+		})
+	}
+
+	tokenString := middleware.GenerateToken(request.Account, constants.ClientType_robot)
+
+	_, _ = c.Ctx.JSON(models.TokenResponse{
+		BaseResponse:models.BaseResponse{
+			Status:"2001",
+			Message:"非法用户",
+		},
+		Token:tokenString,
+	})
 
 }

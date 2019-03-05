@@ -73,7 +73,7 @@ func (c *WebsocketController) Join() {
 	//如果上线用户为医生
 	//获取在线医生列表,并将列表推送给所有的客服
 	if ws_clientType == constants.ClientType_doctor {
-		c.SendOnlineDoctorList()
+		c.PushOnlineDoctorList()
 	}
 
 	//开启事件监听
@@ -92,7 +92,7 @@ func (c *WebsocketController) LoseConnection() {
 
 	//如果离开的用户为doctor，则更新客服的在线医生列表
 	if ws_clientType == "doctor" {
-		c.SendOnlineDoctorList()
+		c.PushOnlineDoctorList()
 	}
 	log.Printf("%s %s lose the connection", ws_account, ws_clientType)
 }
@@ -112,38 +112,11 @@ func (c *WebsocketController) ReceiveRequest(data []byte) {
 	case BusinessTreatRequest: c.TreatRequestHandler(&request)
 	case BusinessTreatHangOut: c.TreatHangOutHandler(&request)
 	case BusinessOnlineDoctor: c.DoctorListRequestHandler(&request)
-	case BusinessTreatList: c.GetTreatWaitList(&request)
+	case BusinessTreatList: c.TreatWaitListHandler(&request)
 	case BusinessDoctorHangOut: c.DoctorHangOutHandler(&request)
 	case BusinessDoctorRejectCall: c.DoctorRejectCallHandler(&request)
 
 	}
-}
-
-//17号业务处理
-//处理用户发起的问诊请求
-//把问诊请求存进数据库，并把等待列表推送给在线客服
-func (c *WebsocketController) TreatRequestHandler(request *models.WSRequest) {
-	//把问诊请求存进数据库
-	c.Service.CreatTreatInfoRequest(&models.TreatInfo{
-		Account:ws_account,
-		ClientName:ws_clientName,
-		Others:"",
-	})
-
-	//把正在等待的问诊请求列表推送给客服
-	treats := c.Service.SearchNewTreatInfoList()
-	var items []interface{}
-	for _, value := range treats {
-		items = append(items, value)
-	}
-	data, _ := json.Marshal(models.WebsocketResponse{
-		Code: "2010",
-		Data: models.List{
-			Items: items,
-		},
-	})
-	log.Printf("TreatList: %s", data)
-	_ = c.Conn.To("service").EmitMessage(data)
 }
 
 //6号业务处理
@@ -202,6 +175,21 @@ func (c *WebsocketController) RobotProfileHandler(request *models.WSRequest) {
 	return
 }
 
+//17号业务处理
+//处理用户发起的问诊请求
+//把问诊请求存进数据库，并把等待列表推送给在线客服
+func (c *WebsocketController) TreatRequestHandler(request *models.WSRequest) {
+	//把问诊请求存进数据库
+	c.Service.CreatTreatInfoRequest(&models.TreatInfo{
+		Account:ws_account,
+		ClientName:ws_clientName,
+		Others:"",
+	})
+
+	//把正在等待的问诊请求列表推送给客服
+	c.PushTreatWaitList()
+}
+
 //24号业务处理
 //机器人端挂断问诊请求
 func (c *WebsocketController) TreatHangOutHandler(request *models.WSRequest) {
@@ -209,8 +197,8 @@ func (c *WebsocketController) TreatHangOutHandler(request *models.WSRequest) {
 	treat := c.Service.SearchNotCompleteTreatInfo("patient", ws_account)
 	treat.Status = constants.Status_treat_complete
 	c.Service.UpdateTreatInfoStatus(treat)
-	//更新客服的问诊列表
-	c.SendTreatWaitList()
+	//推送新的问诊列表给客服
+	c.PushTreatWaitList()
 
 	//同时更新对应医生的状态为空闲
 	doctor := c.Service.SearchClientInfo(treat.HandleDoctor)
@@ -219,13 +207,30 @@ func (c *WebsocketController) TreatHangOutHandler(request *models.WSRequest) {
 		_ = c.Service.UpdateClientInfo(doctor)
 	}
 	//把空闲状态的医生列表推送给客服
-	c.SendOnlineDoctorList()
+	c.PushOnlineDoctorList()
 }
 
 
 //2009号业务处理
-//获取在线医生账号
-func (c *WebsocketController) SendOnlineDoctorList() {
+//推送列表至客服
+func (c *WebsocketController) PushOnlineDoctorList() {
+	doctors := c.Service.GetOnlineDoctor()
+	var items []interface{}
+	for _, value := range doctors {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "2009",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("OnlineDoctorList: %s", data)
+	_ = c.Conn.To("service").EmitMessage(data)
+}
+
+//获取在线医生列表
+func (c *WebsocketController) GetOnlineDoctorList() {
 	doctors := c.Service.GetOnlineDoctor()
 	var items []interface{}
 	for _, value := range doctors {
@@ -244,13 +249,29 @@ func (c *WebsocketController) SendOnlineDoctorList() {
 func (c *WebsocketController) DoctorListRequestHandler(request *models.WSRequest) {
 	if strings.EqualFold(request.Message, " getDoctorList ") {
 		println("getDoctorList")
-		c.SendOnlineDoctorList()
+		c.GetOnlineDoctorList()
 	}
 }
 
 //2010号业务处理
+//推送等候问诊列表至所有客服
+func (c *WebsocketController) PushTreatWaitList() {
+	treats := c.Service.SearchNewTreatInfoList()
+	var items []interface{}
+	for _, value := range treats {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "2010",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("TreatWaitList: %s", data)
+	_ = c.Conn.To("service").EmitMessage(data)
+}
 //客服主动获取等待问诊列表
-func (c *WebsocketController) SendTreatWaitList() {
+func (c *WebsocketController) GetTreatWaitList() {
 	treats := c.Service.SearchNewTreatInfoList()
 	var items []interface{}
 	for _, value := range treats {
@@ -266,11 +287,11 @@ func (c *WebsocketController) SendTreatWaitList() {
 	_ = c.Conn.Write(1,data)
 }
 
-func (c *WebsocketController) GetTreatWaitList(request *models.WSRequest)  {
+func (c *WebsocketController) TreatWaitListHandler(request *models.WSRequest)  {
 	if !strings.EqualFold(request.Message, " getWaitList ") {
 		return
 	}
-	c.SendTreatWaitList()
+	c.GetTreatWaitList()
 }
 
 //2012号业务处理
@@ -281,7 +302,7 @@ func (c *WebsocketController) DoctorHangOutHandler(request *models.WSRequest) {
 	doctor.OnlineStatus = constants.Status_online
 	_ = c.Service.UpdateClientInfo(doctor)
 	//推送新的列表到客服
-	c.SendOnlineDoctorList()
+	c.PushOnlineDoctorList()
 }
 
 //2013号业务处理
@@ -293,12 +314,12 @@ func (c *WebsocketController) DoctorRejectCallHandler(request *models.WSRequest)
 	treat.Status = constants.Status_treat_new
 	c.Service.UpdateTreatInfoStatus(treat)
 	//更新客服的问诊列表
-	c.SendTreatWaitList()
+	c.PushTreatWaitList()
 
 	//更新医生状态为空闲
 	doctor := c.Service.SearchClientInfo(ws_account)
 	doctor.OnlineStatus = constants.Status_online
 	_ = c.Service.UpdateClientInfo(doctor)
 	//推送新的列表到客服
-	c.SendOnlineDoctorList()
+	c.PushOnlineDoctorList()
 }
