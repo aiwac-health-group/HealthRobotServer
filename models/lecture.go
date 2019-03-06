@@ -10,8 +10,9 @@ type LectureInfo struct{
 	 Content     string     `gorm:"column:Content;type:text"`          //健康讲座文字内容
 	 Filename    string     `gorm:"column:Filename;type:varchar(100)"` //音频文件名
 	 Filetype    int        `gorm:"column:Filetype;type:int(11)"`      //健康讲座内容类型  1为文本类型，2为音频类型，3为视频类型         
-	 Duration    string     `gorm:"column:Duration;type:varchar(100)"`
-	 Cover       string     `gorm:"column:Cover;type:varchar(100)"`
+	 Duration    string     `gorm:"column:Duration;type:varchar(100)"` //健康讲座时长，默认为Null
+	 Cover       string     `gorm:"column:Cover;type:varchar(100)"`    //健康讲座缩略图
+	 HandleService string   `gorm:"column:Service;type:varchar(11)"`//健康讲座处理客服工号
 	}
 
 type TextAbstract struct{

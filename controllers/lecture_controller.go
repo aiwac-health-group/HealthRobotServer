@@ -1,26 +1,33 @@
 package controllers
 import (
-	//"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
-	//"strings"
 	"HealthRobotServer-master/services"
 	"HealthRobotServer-master/models"
-    "io"
+	"HealthRobotServer-master/middleware"
+  "io"
 	"os"
 	"os/exec"
 	"fmt"
 	"encoding/base64"
+	"encoding/json"
 	"bytes"
 	"log"
+	"github.com/dgrijalva/jwt-go"
 )
 type LectureController struct {
 	Ctx iris.Context
 	Service services.LectureService
 }
 
+type Responseinfo struct {
+	status     int
+	message   string
+}
+
 func (c *LectureController) BeforeActivation(b mvc.BeforeActivation)  {
 	//指定LectureController TestLecture功能的访问Url
+	b.Router().Use(middleware.JwtHandler().Serve, middleware.NewAuthToken().Serve)
 	b.Handle("POST","/uploadLecturetext","UploadLecturetext")
 	b.Handle("POST","/uploadLectureaudio","UploadLectureaudio")
 	b.Handle("POST","/uploadLecturevideo","UploadLecturevideo")
@@ -31,7 +38,18 @@ func (c *LectureController) BeforeActivation(b mvc.BeforeActivation)  {
 func (c *LectureController) UploadLecturetext() {
 
 	 lectureinfo := c.GetJsonText(1)
-	 c.Service.Insert(lectureinfo)
+	 status :=c.Service.Insert(lectureinfo)
+	 if status !=nil{
+		responseinfo := Responseinfo{
+			status:     2001,
+			message:   "insert error",
+		}
+	 jsonfile,err:=json.Marshal(responseinfo)
+   if err != nil {
+		log.Fatal("error:", err)
+     }
+	  c.Ctx.JSON(jsonfile)
+   }
 
 }
 
@@ -39,51 +57,79 @@ func (c *LectureController) UploadLectureaudio() {
 	lectureinfo := c.GetJsonFile(2)
 	cover :=c.GetAudioFile(lectureinfo)
 	lectureinfo.Cover = cover
-	c.Service.Insert(lectureinfo)
+	status :=c.Service.Insert(lectureinfo)
+	if status !=nil{
+		responseinfo := Responseinfo{
+			status:     2001,
+			message:   "insert error",
+		}
+	jsonfile,err:=json.Marshal(responseinfo)
+	if err != nil {
+		log.Fatal("error:", err)
+     }
+	c.Ctx.JSON(jsonfile)
+  }
 }
 
 func (c *LectureController) UploadLecturevideo() {
 	lectureinfo := c.GetJsonFile(3)
 	cover := c.GetVideoFile(lectureinfo)
 	lectureinfo.Cover = cover
-	c.Service.Insert(lectureinfo)
+	status :=c.Service.Insert(lectureinfo)
+	if status !=nil{
+		responseinfo := Responseinfo{
+			status:     2001,
+			message:   "insert error",
+		}
+	jsonfile,err:=json.Marshal(responseinfo)
+	if err != nil {
+		log.Fatal("error:", err)
+     }
+	c.Ctx.JSON(jsonfile)
+  }
 }
-
 //获取文件版Lecture model 的json字符信息并格式化
 func (c *LectureController)GetJsonFile(filetype int) *models.LectureInfo{
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	service := claims["Account"].(string)
 	info := &models.LectureInfo{}
 	jsonfile :=&models.JsonFileInfo{}
     if err := c.Ctx.ReadJSON(jsonfile); err != nil{
 		    return info
 		    // panic(err.Error())
         }else{
-			c.Ctx.JSON(jsonfile)
 			info.Title = jsonfile.Title
 			info.Abstract = jsonfile.Blief
 			info.Filetype = filetype
 			info.Filename = jsonfile.Filename 
+			info.HandleService = service
 			return info
         }
 }
 
 //获取文字版Lecture model 的json字符信息并格式化
 func (c *LectureController)GetJsonText(filetype int) *models.LectureInfo{
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	service := claims["Account"].(string)
 	info := &models.LectureInfo{}
 	jsontext :=&models.JsonTextInfo{}
     if err := c.Ctx.ReadJSON(jsontext); err != nil{
 		    return info
 		    // panic(err.Error())
         }else{
-			c.Ctx.JSON(jsontext)
 			info.Title = jsontext.Title
 			info.Abstract = jsontext.Blief
 			info.Content = jsontext.Text
 			info.Filetype = filetype
+			info.HandleService = service
 			return info
         }
 }
 
-//获取上传视频文件
+//获取上传视频文件至uploads文件夹中
+//针对表单提交FormFile("uploadfile")，file应有一个name为uploadfile
 func (c *LectureController)GetVideoFile(lecture *models.LectureInfo)string{
 	const maxSize = 50 << 20 // 50MB
 	 file, info, err := c.Ctx.FormFile("uploadfile")
@@ -131,7 +177,8 @@ func (c *LectureController)GetAudioFile(lecture *models.LectureInfo)string{
 	  }
 	  defer out.Close()
 	  io.Copy(out, file)
-	  //音频文件默认展示图片
+		//音频文件默认展示图片logo.jpg
+		//该操作为转换默认展示图片的base64码，类型为string
 	  filename :="../uploads/logo.jpg"
 	  picture, err := os.Open(filename)
 	  if err != nil {
@@ -158,6 +205,8 @@ func (c *LectureController)GetAudioFile(lecture *models.LectureInfo)string{
 	  return encodeString
 }
 
+//该函数为Base64转码，需要注意的是因为go没有处理视频的工具包，所以只能使用cmd命令中的ffmpeg来进行处理
+//所以需要在测试时注意文件执行位置，传入filename为.../uploads/filename
 func GetBase64Frame(filename string) string {
     width := 2752
 	height := 2208
