@@ -14,6 +14,7 @@ import (
 type AdminController struct {
 	Ctx iris.Context
 	Service services.ClientService
+	ServiceStatistic services.StatisticService
 }
 
 func (c *AdminController) BeforeActivation(b mvc.BeforeActivation)  {
@@ -22,6 +23,7 @@ func (c *AdminController) BeforeActivation(b mvc.BeforeActivation)  {
 	b.Handle("POST","/addDoctor","AddDoctor")
 	b.Handle("POST","/changeAccount","ModifyClientAccount")
 	b.Handle("POST","/changeDoctor","ModifyDoctorProfile")
+	b.Handle("POST","/queryService","QueryService")
 }
 
 //管理员添加客服账号
@@ -225,4 +227,35 @@ func (c *AdminController) ModifyDoctorProfile() {
 		Message:"successfully",
 	})
 
+}
+
+//管理员查询工作量
+func (c *AdminController) QueryService(){
+	var request models.StatisticRequest
+	if err := c.Ctx.ReadJSON(&request); err != nil {
+		log.Println("fail to encode request")
+		return
+	}
+	lecture:=c.ServiceStatistic.SelectLecturework(&request)
+	report:=c.ServiceStatistic.SelectReportwork(&request)
+	regist:=c.ServiceStatistic.SelectRegistwork(&request)
+	worker:=c.ServiceStatistic.WorkerList()
+	var statisticwork []models.ClientTotalWork
+	for i:= 0;i<len(worker);i++{
+		statisticwork[i].ClientAccount = worker[i].ClientAccount
+		statisticwork[i].ClientName = worker[i].ClientName
+		statisticwork[i].CountLecture = lecture[i].CountLecture
+		statisticwork[i].CountReport = report[i].CountReport
+		statisticwork[i].CountRegist = regist[i].CountRegist
+	}
+	var items []interface{}
+	for _, value := range statisticwork {
+		items = append(items, value)
+	}
+	_, _ = c.Ctx.JSON(models.WebsocketResponse{
+		Code: "2005 ",
+		Data: models.List{
+			Items: items,
+		},
+	})    
 }

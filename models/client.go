@@ -36,3 +36,10 @@ type Robot struct {
 	Address string `gorm:"column:address;type:varchar(128)"`
 	Wechat string `gorm:"column:wechat;type:varchar(128)"`
 }
+
+
+//客服人员工号姓名列表
+type Client struct{
+	ClientAccount string `gorm:"column:client_account;type:varchar(11);not null;unique;" json:"acount"`
+	ClientName string `gorm:"column:client_name;type:varchar(128);" json:"name"`
+}

@@ -129,10 +129,10 @@ func (c *LectureController)GetJsonText(filetype int) *models.LectureInfo{
 }
 
 //获取上传视频文件至uploads文件夹中
-//针对表单提交FormFile("uploadfile")，file应有一个name为uploadfile
+//针对表单提交FormFile("file")，file应有一个name为file
 func (c *LectureController)GetVideoFile(lecture *models.LectureInfo)string{
 	const maxSize = 50 << 20 // 50MB
-	 file, info, err := c.Ctx.FormFile("uploadfile")
+	 file, info, err := c.Ctx.FormFile("file")
 	 if err != nil {
 		c.Ctx.StatusCode(iris.StatusInternalServerError)
 		c.Ctx.HTML("Error while uploading: <b>" + err.Error() + "</b>")
@@ -158,7 +158,7 @@ func (c *LectureController)GetVideoFile(lecture *models.LectureInfo)string{
 //获取上传音频文件
 func (c *LectureController)GetAudioFile(lecture *models.LectureInfo)string{
 	const maxSize = 50 << 20 // 50MB
-	 file, info, err := c.Ctx.FormFile("uploadfile")
+	 file, info, err := c.Ctx.FormFile("file")
 	 if err != nil {
 		c.Ctx.StatusCode(iris.StatusInternalServerError)
 		c.Ctx.HTML("Error while uploading: <b>" + err.Error() + "</b>")
