@@ -1,11 +1,11 @@
 package controllers
 
 import (
-	"HealthRobotServer/constants"
-	"HealthRobotServer/manager"
-	"HealthRobotServer/middleware"
-	"HealthRobotServer/models"
-	"HealthRobotServer/services"
+	"HealthRobotServer-master/constants"
+	"HealthRobotServer-master/manager"
+	"HealthRobotServer-master/middleware"
+	"HealthRobotServer-master/models"
+	"HealthRobotServer-master/services"
 	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
@@ -18,13 +18,18 @@ import (
 
 const (
 	BusinessRobotProfile = 6
+	BusinessLectureAudioAbstract = 9      //健康讲座视频摘要查询
+	BusinessLectureVideoAbstract = 10      //健康讲座视频摘要查询
+	BusinessLectureFileContent  = 11      //健康讲座音频和视频详情查询
+	BusinessLectureTextAbstract = 12      //健康讲座文本摘要查询
+	BusinessLectureTextContent  = 13      //健康讲座文本详情查询
 	BusinessTreatRequest = 17 //机器人发起问诊请求
 	BusinessTreatHangOut = 24 //机器人挂断问诊请求
 	BusinessOnlineDoctor = 2009 //客服获取在线医生列表
 	BusinessTreatList = 2010 //客服获取待问诊列表
 	BusinessDoctorHangOut = 2012 //医生主动挂断问诊电话
 	BusinessDoctorRejectCall = 2013 //医生拒绝接听问诊电话
-)
+    				)
 
 type WebsocketController struct {
 	Ctx iris.Context
@@ -115,8 +120,13 @@ func (c *WebsocketController) ReceiveRequest(data []byte) {
 	case BusinessTreatList: c.TreatWaitListHandler(&request)
 	case BusinessDoctorHangOut: c.DoctorHangOutHandler(&request)
 	case BusinessDoctorRejectCall: c.DoctorRejectCallHandler(&request)
-
-	}
+    case BusinessLectureTextAbstract:  c.LectureTextAbstractHandler(&request)
+	case BusinessLectureVideoAbstract: c.LectureVideoAbstractHandler(&request)
+	case BusinessLectureAudioAbstract: c.LectureAudioAbstractHandler(&request)
+	case BusinessLectureTextContent:   c.LectureTextContentHandler(&request)
+	case BusinessLectureFileContent:   c.LectureTextContentHandler(&request)
+	
+}
 }
 
 //6号业务处理
@@ -173,6 +183,114 @@ func (c *WebsocketController) RobotProfileHandler(request *models.WSRequest) {
 	})
 	_ = c.Conn.Write(1,data)
 	return
+}
+
+//0009号业务处理
+func(c *WebsocketController) LectureAudioAbstractHandler(request *models.WSRequest){
+	filetype :="2"
+	lectures := c.Service.LectureFileAbstract(filetype)
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Account: request.Account,
+		Code: "0009",
+		ClientType: request.ClientType,
+		UniqueID: request.UniqueID,
+		Status:"2000",
+		Message:"string",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	RobotConn := c.WsManager.GetWSConnection(request.Account)
+	_ = (*RobotConn).Write(1,data)
+
+}
+
+//0010号业务处理
+func(c *WebsocketController) LectureVideoAbstractHandler(request *models.WSRequest){
+	filetype :="3"
+	lectures := c.Service.LectureFileAbstract(filetype)
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Account: request.Account,
+		Code: "0010",
+		ClientType: request.ClientType,
+		UniqueID: request.UniqueID,
+		Status:"2000",
+		Message:"string",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	RobotConn := c.WsManager.GetWSConnection(request.Account)
+	_ = (*RobotConn).Write(1,data)
+}
+
+//0011号业务处理
+func(c *WebsocketController) LectureFileContentHandler(request *models.WSRobotRequest){
+	lectures := c.Service.LectureFileContent(request.LectureID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Account: request.Account,
+		Code: "0011",
+		ClientType: request.ClientType,
+		UniqueID: request.UniqueID,
+		Status:"2000",
+		Message:"string",
+		Link:lectures.Filename,
+	})
+	log.Printf("lectureList: %s", data)
+	RobotConn := c.WsManager.GetWSConnection(request.Account)
+	_ = (*RobotConn).Write(1,data)
+}
+
+//0012号业务处理
+func(c *WebsocketController) LectureTextAbstractHandler(request *models.WSRequest){
+	
+	lectures := c.Service.LectureTextAbstract()
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Account: request.Account,
+		Code: "0012",
+		ClientType: request.ClientType,
+		UniqueID: request.UniqueID,
+		Status:"2000",
+		Message:"string",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	RobotConn := c.WsManager.GetWSConnection(request.Account)
+	_ = (*RobotConn).Write(1,data)
+}
+
+//0013号业务处理
+func(c *WebsocketController) LectureTextContentHandler(request *models.WSRequest) {
+
+	lectures := c.Service.LectureTextContent(request.LectureID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Account: request.Account,
+		Code: "0013",
+		ClientType: request.ClientType,
+		UniqueID: request.UniqueID,
+		Status:"2000",
+		Message:"string",
+		LectureContext:lectures.Content,
+	})
+	log.Printf("lectureList: %s", data)
+	RobotConn := c.WsManager.GetWSConnection(request.Account)
+	_ = (*RobotConn).Write(1,data)
 }
 
 //17号业务处理

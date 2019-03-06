@@ -1,10 +1,10 @@
 package services
 
 import (
-	"HealthRobotServer/constants"
-	"HealthRobotServer/dao"
-	"HealthRobotServer/datasource"
-	"HealthRobotServer/models"
+	"HealthRobotServer-master/constants"
+	"HealthRobotServer-master/dao"
+	"HealthRobotServer-master/datasource"
+	"HealthRobotServer-master/models"
 	"log"
 )
 

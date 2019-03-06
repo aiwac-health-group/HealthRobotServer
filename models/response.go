@@ -24,6 +24,11 @@ type WebsocketResponse struct {
 	Status string `json:"status,omitempty"`
 	Message string `json:"message,omitempty"`
 	//可扩展
+	Account    string `json:"account,omitempty"`
+	UniqueID   string `json:"uniqueID,omitempty"`
+	ClientType string `json:"clientType,omitempty"`
+	Link       string `json:"link,omitempty"`
+	LectureContext string `json:"lectureContext,omitempty"`
 	RoomID string `json:"roomid,omitempty"`
 	RobotResponse
 }

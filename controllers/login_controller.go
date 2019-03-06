@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"HealthRobotServer/constants"
-	"HealthRobotServer/middleware"
-	"HealthRobotServer/models"
-	"HealthRobotServer/services"
+	"HealthRobotServer-master/constants"
+	"HealthRobotServer-master/middleware"
+	"HealthRobotServer-master/models"
+	"HealthRobotServer-master/services"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
 	"log"

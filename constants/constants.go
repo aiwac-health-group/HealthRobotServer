@@ -17,6 +17,7 @@ const (
 	Table_webClient = "web_profile"
 	Table_robot = "robot_profile"
 	Table_TreatInfo = "treat_info"
+	Table_Lecture = "lecture"
 )
 
 const  (

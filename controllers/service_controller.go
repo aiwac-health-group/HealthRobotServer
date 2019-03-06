@@ -1,11 +1,11 @@
 package controllers
 
 import (
-	"HealthRobotServer/constants"
-	"HealthRobotServer/manager"
-	"HealthRobotServer/middleware"
-	"HealthRobotServer/models"
-	"HealthRobotServer/services"
+	"HealthRobotServer-master/constants"
+	"HealthRobotServer-master/manager"
+	"HealthRobotServer-master/middleware"
+	"HealthRobotServer-master/models"
+	"HealthRobotServer-master/services"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"

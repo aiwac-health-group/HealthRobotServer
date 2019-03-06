@@ -29,17 +29,20 @@ func newApp() (api *iris.Application) {
 		app.Register(services.NewLoginService())
 		app.Handle(new(controllers.LoginController))
 	})
-
+	
+	
 	mvc.Configure(api.Party("/admin"), func(app *mvc.Application) {
 		app.Register(services.NewClientService())
 		app.Handle(new(controllers.AdminController))
 	})
-
+    //增加NewLectureService,LectureController
 	mvc.Configure(api.Party("/service"), func(app *mvc.Application) {
 		app.Register(manager.WSInstance())
 		app.Register(manager.CRInstance())
 		app.Register(services.NewServiceService())
+		app.Register(services.NewLectureService())
 		app.Handle(new(controllers.ServiceController))
+		app.Handle(new(controllers.LectureController))
 	})
 
 	mvc.Configure(api.Party("/ws"), func(app *mvc.Application) {

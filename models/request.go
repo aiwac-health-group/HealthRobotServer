@@ -31,6 +31,35 @@ type DoctorProfileModifyRequest struct {
 	Brief string `json:"blief"`
 }
 
+type LectureAbstractRequest struct {
+	Account              string `json:"account"`
+	BusinessCode         string `json:"code"`
+	UniqueID             string `json:"uniqueID"`
+	ClientType           string `json:"clientType"`
+	Time                 string `json:"time"`
+}
+
+type LectureContentRequest struct {
+	Account              string `json:"account"`
+	BusinessCode         string `json:"code"`
+	UniqueID             string `json:"uniqueID"`
+	ClientType           string `json:"clientType"`
+	Time                 string `json:"time"`
+	LectureID            string `json:"lectureID"`
+}
+
+type JsonTextInfo struct{
+    Title   string  `json:"title"`
+	Blief  string  `json:"belief"`
+	Text    string  `json:"text"`
+}
+
+type JsonFileInfo struct{
+	Title       string  `json:"title"`
+	Filename    string  `json:"filename"`
+	Blief      string  `json:"blief"`
+}
+
 //websocket请求
 type WSRequest struct {
 	BusinessCode string `json:"code"`
@@ -51,6 +80,7 @@ type WSRobotRequest struct {
 	UniqueID   string `json:"uniqueID,omitempty"`
 	ClientType string `json:"clientType,omitempty"`
 	Time       string `json:"time,omitempty"`
+	LectureID  string `json:"lectureID,omitempty"`
 	WSRobotProfile
 }
 
