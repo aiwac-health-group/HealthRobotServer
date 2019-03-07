@@ -205,8 +205,9 @@ func(c *WebsocketController) LectureAudioAbstractHandler(request *models.WSReque
 		},
 	})
 	log.Printf("lectureList: %s", data)
-	RobotConn := c.WsManager.GetWSConnection(request.Account)
-	_ = (*RobotConn).Write(1,data)
+	_ = c.Conn.Write(1,data)
+	// RobotConn := c.WsManager.GetWSConnection(request.Account)
+	// _ = (*RobotConn).Write(1,data)
 
 }
 
@@ -230,8 +231,9 @@ func(c *WebsocketController) LectureVideoAbstractHandler(request *models.WSReque
 		},
 	})
 	log.Printf("lectureList: %s", data)
-	RobotConn := c.WsManager.GetWSConnection(request.Account)
-	_ = (*RobotConn).Write(1,data)
+	_ = c.Conn.Write(1,data)
+	// RobotConn := c.WsManager.GetWSConnection(request.Account)
+	// _ = (*RobotConn).Write(1,data)
 }
 
 //0011号业务处理
@@ -247,8 +249,9 @@ func(c *WebsocketController) LectureFileContentHandler(request *models.WSRobotRe
 		Link:lectures.Filename,
 	})
 	log.Printf("lectureList: %s", data)
-	RobotConn := c.WsManager.GetWSConnection(request.Account)
-	_ = (*RobotConn).Write(1,data)
+	_ = c.Conn.Write(1,data)
+	// RobotConn := c.WsManager.GetWSConnection(request.Account)
+	// _ = (*RobotConn).Write(1,data)
 }
 
 //0012号业务处理
@@ -271,8 +274,9 @@ func(c *WebsocketController) LectureTextAbstractHandler(request *models.WSReques
 		},
 	})
 	log.Printf("lectureList: %s", data)
-	RobotConn := c.WsManager.GetWSConnection(request.Account)
-	_ = (*RobotConn).Write(1,data)
+	_ = c.Conn.Write(1,data)
+	// RobotConn := c.WsManager.GetWSConnection(request.Account)
+	// _ = (*RobotConn).Write(1,data)
 }
 
 //0013号业务处理
@@ -289,8 +293,9 @@ func(c *WebsocketController) LectureTextContentHandler(request *models.WSRequest
 		LectureContext:lectures.Content,
 	})
 	log.Printf("lectureList: %s", data)
-	RobotConn := c.WsManager.GetWSConnection(request.Account)
-	_ = (*RobotConn).Write(1,data)
+	_ = c.Conn.Write(1,data)
+	// RobotConn := c.WsManager.GetWSConnection(request.Account)
+	// _ = (*RobotConn).Write(1,data)
 }
 
 //17号业务处理

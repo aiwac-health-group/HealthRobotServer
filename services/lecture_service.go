@@ -41,7 +41,7 @@ func (service *lectureService) LectureTextContent(LectureID string) *models.Text
 
 func (service *lectureService)  LectureTextAbstract() []models.TextAbstract {
 	var info []models.TextAbstract
-	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.Title,lecture.updated_at").Find(&info)
+	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.Title,lecture.Abstract,lecture.updated_at").Find(&info)
     return info
 }
 

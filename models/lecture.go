@@ -11,7 +11,7 @@ type LectureInfo struct{
 	 Filename    string     `gorm:"column:Filename;type:varchar(100)"` //音频文件名
 	 Filetype    int        `gorm:"column:Filetype;type:int(11)"`      //健康讲座内容类型  1为文本类型，2为音频类型，3为视频类型         
 	 Duration    string     `gorm:"column:Duration;type:varchar(100)"` //健康讲座时长，默认为Null
-	 Cover       string     `gorm:"column:Cover;type:varchar(100)"`    //健康讲座缩略图
+	 Cover       string     `gorm:"column:Cover;type:text"`    //健康讲座缩略图
 	 HandleService string   `gorm:"column:Service;type:varchar(11)"`//健康讲座处理客服工号
 	}
 
@@ -19,6 +19,7 @@ type TextAbstract struct{
 	 ID   int        `gorm:"column:ID;type:int(11)" json:"lectureID"`
 	 Title        string     `gorm:"column:Title;type:varchar(100)" json:"name"`
 	 Updated_at  time.Time  `gorm:"column:updated_at"    json:"updateTime"`
+	 Abstract    string 	`gorm:"column:Abstract;type:varchar(500)" json:"description"`
 }
 
 type FileAbstract struct{
