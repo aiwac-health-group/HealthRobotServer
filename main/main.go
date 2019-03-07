@@ -42,6 +42,11 @@ func newApp() (api *iris.Application) {
 		app.Handle(new(controllers.ServiceController))
 	})
 
+	mvc.Configure(api.Party("/doctor"), func(app *mvc.Application) {
+		app.Register(services.NewClientService())
+		app.Handle(new(controllers.DoctorController))
+	})
+
 	mvc.Configure(api.Party("/ws"), func(app *mvc.Application) {
 		ws := websocket.New(websocket.Config{})
 		app.Register(services.NewWebsocketService())

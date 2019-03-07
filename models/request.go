@@ -41,7 +41,7 @@ type WSRequest struct {
 
 //Web工作人员的websocket请求字段
 type WSWebRequest struct {
-	Message string `json:"message,,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 //机器人端的websocket请求字段

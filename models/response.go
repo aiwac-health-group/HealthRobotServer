@@ -2,7 +2,8 @@ package models
 
 type BaseResponse struct {
 	Status string `json:"status"`
-	Message string `json:"message"`
+	Message string `json:"message, omitempty"`
+	Data List `json:"data,omitempty"`
 }
 
 type LoginResponse struct {

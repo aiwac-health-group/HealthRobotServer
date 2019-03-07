@@ -41,7 +41,7 @@ func (c *ServiceController) ModifyDoctorProfile() {
 	}
 
 	//判断医生是否已经存在
-	if client := c.Service.SearchClientInfo(request.Account); client == nil {
+	if client := c.Service.SearchDoctorClientInfo(request.Account); client == nil {
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account doesn't exist",
@@ -50,7 +50,7 @@ func (c *ServiceController) ModifyDoctorProfile() {
 	}
 
 	//添加详细信息
-	var profile = models.WebClient{
+	var profile = models.DoctorInfo{
 		ClientAccount:request.Account,
 		ClientName:request.Name,
 		ClientType:"doctor",
@@ -58,7 +58,7 @@ func (c *ServiceController) ModifyDoctorProfile() {
 		Brief:request.Brief,
 	}
 
-	if err := c.Service.UpdateWebClientProfile(&profile); err != nil {
+	if err := c.Service.UpdateDoctorClientInfo(&profile); err != nil {
 		_, _ =c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"failed to modify doctor profile",
@@ -88,7 +88,7 @@ func (c *ServiceController) AllocateDoctorForTreat() {
 	}
 
 	//验证分配的医生账号是否存在
-	doctor := c.Service.SearchClientInfo(allocation.Doctor)
+	doctor := c.Service.SearchDoctorClientInfo(allocation.Doctor)
 	if doctor == nil || !strings.EqualFold(doctor.ClientType, constants.ClientType_doctor) { //账号不存在，或者分配的账号不是医生账号
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:  "2001",
@@ -127,7 +127,7 @@ func (c *ServiceController) AllocateDoctorForTreat() {
 	}
 	//更新医生状态
 	doctor.OnlineStatus = constants.Status_onbusy
-	if err := c.Service.UpdateClientInfo(doctor); err != nil {
+	if err := c.Service.UpdateDoctorClientInfo(doctor); err != nil {
 		log.Println("Fail to Update Doctor status")
 		return
 	}
