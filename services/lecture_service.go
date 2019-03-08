@@ -35,25 +35,25 @@ func (service *lectureService) Insert(info *models.LectureInfo) error {
 
 func (service *lectureService) LectureTextContent(LectureID string) *models.TextContent {
 	var info  models.TextContent
-	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.Content").Where("ID = ? ", LectureID).Find(&info)
+	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.content").Where("lecture.ID = ? ", LectureID).Find(&info)
     return &info
 }
 
 func (service *lectureService)  LectureTextAbstract() []models.TextAbstract {
 	var info []models.TextAbstract
-	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.Title,lecture.Abstract,lecture.updated_at").Find(&info)
+	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.title,lecture.abstract,lecture.updated_at").Find(&info)
     return info
 }
 
 func (service *lectureService) LectureFileAbstract(Filetype string)  []models.FileAbstract {
 	var info []models.FileAbstract
-	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.Title,lecture.updated_at,lecture.Abstract,lecture.Cover,lecture.Duration").Where("ID = ? ", Filetype).Find(&info)
+	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.ID,lecture.title,lecture.updated_at,lecture.abstract,lecture.cover,lecture.duration").Where("lecture.filetype = ? ", Filetype).Find(&info)
     return info
 }
 
 func (service *lectureService) LectureFileContent(LectureID string)  *models.FileContent {
 	var info  models.FileContent
-	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.Filename").Where("ID = ? ", LectureID).Find(&info)
+	service.dao.Engine.Table(constants.Table_Lecture).Select("lecture.filename,lecture.abstract").Where("lecture.ID = ? ", LectureID).Find(&info)
 	return &info
 }
 

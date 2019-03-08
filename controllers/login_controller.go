@@ -53,35 +53,49 @@ func (c *LoginController) LoginWithPassword() {
 		return
 	}
 
-	//根据账号验证用户是否存在
-	if clientInfo := c.Service.SearchClientInfo(loginInfo.Account); clientInfo.ID == 0 {
+	var account string
+	var password string
+	var name string
+	var clientType string
+
+	//根据账号查找客服表及医生表来验证用户是否存在
+	serviceInfo := c.Service.SearchServiceClientInfo(loginInfo.Account)
+	doctorInfo := c.Service.SearchDoctorClientInfo(loginInfo.Account)
+	if serviceInfo.ID == 0 && doctorInfo.ID == 0 { //账户不存在
 		_, _ = c.Ctx.JSON(models.LoginResponse{
 			LoginFlag:"failed",
 		})
 		return
+	} else if serviceInfo.ID != 0 {
+		account = loginInfo.Account
+		password = serviceInfo.ClientPassword
+		name = serviceInfo.ClientName
+		clientType = serviceInfo.ClientType
 	} else {
-		if strings.EqualFold(loginInfo.Password, clientInfo.ClientPassword) {
-			//密码正确
-			//获取该用户的详细信息
-			profile := c.Service.SearchWebClientProfile(loginInfo.Account)
-
-			//生成token返回至用户,并更新数据库中的token
-			tokenString := middleware.GenerateToken(clientInfo.ClientAccount, clientInfo.ClientType)
-
-			_, _ = c.Ctx.JSON(models.LoginResponse{
-				LoginFlag:"success",
-				ClientType:profile.ClientType,
-				ClientName:profile.ClientName,
-				Token:tokenString,
-			})
-
-		} else {
-			_, _ = c.Ctx.JSON(models.LoginResponse{
-				LoginFlag:"failed",
-			})
-		}
-		return
+		account = loginInfo.Account
+		password = doctorInfo.ClientPassword
+		name = doctorInfo.ClientName
+		clientType = doctorInfo.ClientType
 	}
+
+	if strings.EqualFold(loginInfo.Password, password) { //密码正确
+
+		//生成token返回至用户,并更新数据库中的token
+		tokenString := middleware.GenerateToken(account, clientType)
+
+		_, _ = c.Ctx.JSON(models.LoginResponse{
+			LoginFlag:"success",
+			ClientType:clientType,
+			ClientName:name,
+			Token:tokenString,
+		})
+
+	} else {
+		_, _ = c.Ctx.JSON(models.LoginResponse{
+			LoginFlag:"failed",
+		})
+	}
+	return
 
 }
 
@@ -114,3 +128,4 @@ func (c *LoginController) GetAccessToken() {
 	})
 
 }
+

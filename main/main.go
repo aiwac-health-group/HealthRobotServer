@@ -1,10 +1,10 @@
 package main
 
 import (
-	"HealthRobotServer/controllers"
-	"HealthRobotServer/datasource"
-	"HealthRobotServer/manager"
-	"HealthRobotServer/services"
+	"HealthRobotServer-master/controllers"
+	"HealthRobotServer-master/datasource"
+	"HealthRobotServer-master/manager"
+	"HealthRobotServer-master/services"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
@@ -33,12 +33,15 @@ func newApp() (api *iris.Application) {
 	
 	mvc.Configure(api.Party("/admin"), func(app *mvc.Application) {
 		app.Register(services.NewClientService())
+		app.Register(services.NewStatisticService())
 		app.Handle(new(controllers.AdminController))
 	})
     //增加NewLectureService,LectureController
 	mvc.Configure(api.Party("/service"), func(app *mvc.Application) {
+
 		app.Register(manager.WSInstance())
 		app.Register(manager.CRInstance())
+
 		app.Register(services.NewServiceService())
 		app.Register(services.NewLectureService())
 		app.Handle(new(controllers.ServiceController))

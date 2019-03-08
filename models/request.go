@@ -50,7 +50,7 @@ type LectureContentRequest struct {
 
 type JsonTextInfo struct{
     Title   string  `json:"title"`
-	Blief  string  `json:"belief"`
+	Blief  string  `json:"blief"`
 	Text    string  `json:"text"`
 }
 

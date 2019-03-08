@@ -24,7 +24,7 @@ func Instance() *gorm.DB {
 		return engine
 	}
     //更改数据库密码为123456
-	db, err := gorm.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/healthrobotdb?charset=utf8&parseTime=true&loc=Local")
+	db, err := gorm.Open("mysql", "root:aiwac2019@tcp(127.0.0.1:3306)/healthrobotdb?charset=utf8&parseTime=true&loc=Local")
 	if err != nil {
 		log.Fatal("dbhelper.Instance error",err)
 		return nil

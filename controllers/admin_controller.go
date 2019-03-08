@@ -35,8 +35,8 @@ func (c *AdminController) AddService() {
 		return
 	}
 
-	//查询账户信息是否已经存在
-	if client := c.Service.SearchClientInfo(request.Account); client.ID != 0 {
+	//查询该客服的账户信息是否已经存在
+	if service := c.Service.SearchServiceClientInfo(request.Account); service.ID != 0 {
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account have already exist",
@@ -44,30 +44,15 @@ func (c *AdminController) AddService() {
 		return
 	}
 
-	//添加基本登录信息
-	var info = models.ClientInfo{
+	//添加客服信息
+	var info = models.ServiceInfo{
 		ClientAccount:request.Account,
 		ClientPassword:request.Password,
-		ClientType:constants.ClientType_service,
-		//OnlineStatus:constants.Status_outline,
-	}
-	
-	if err := c.Service.UpdateClientInfo(&info); err != nil {
-		_, _ =c.Ctx.JSON(models.BaseResponse{
-			Status:"2001",
-			Message:"failed to add service",
-		})
-		return
-	}
-	
-	//添加详细信息(添加已有项)
-	var profile = models.WebClient{
-		ClientAccount:request.Account,
 		ClientName:request.Name,
-		ClientType:"service",
+		ClientType:constants.ClientType_service,
 	}
 
-	if err := c.Service.UpdateWebClientProfile(&profile); err != nil {
+	if err := c.Service.UpdateServiceClientInfo(&info); err != nil {
 		_, _ =c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"failed to add service",
@@ -93,7 +78,7 @@ func (c *AdminController) AddDoctor() {
 	}
 
 	//查询账户信息是否已经存在
-	if client := c.Service.SearchClientInfo(request.Account); client.ID != 0 {
+	if client := c.Service.SearchDoctorClientInfo(request.Account); client.ID != 0 {
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account have already exist",
@@ -101,29 +86,15 @@ func (c *AdminController) AddDoctor() {
 		return
 	}
 
-	//添加基本登录信息
-	var info = models.ClientInfo{
+	//添加医生信息
+	var info = models.DoctorInfo{
 		ClientAccount:request.Account,
 		ClientPassword:request.Password,
-		ClientType:constants.ClientType_doctor,
-	}
-
-	if err := c.Service.UpdateClientInfo(&info); err != nil {
-		_, _ =c.Ctx.JSON(models.BaseResponse{
-			Status:"2001",
-			Message:"failed to add doctor",
-		})
-		return
-	}
-
-	//添加详细信息(添加已有项)
-	var profile = models.WebClient{
-		ClientAccount:request.Account,
 		ClientName:request.Name,
 		ClientType:constants.ClientType_doctor,
 	}
 
-	if err := c.Service.UpdateWebClientProfile(&profile); err != nil {
+	if err := c.Service.UpdateDoctorClientInfo(&info); err != nil {
 		_, _ =c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"failed to add doctor",
@@ -148,34 +119,70 @@ func (c *AdminController) ModifyClientAccount() {
 	}
 
 	//判断账号是否存在
-	if client := c.Service.SearchClientInfo(request.Account); client.ID != 0 {
+	service := c.Service.SearchServiceClientInfo(request.Account)
+	doctor := c.Service.SearchDoctorClientInfo(request.Account)
+	if service.ID == 0 && doctor.ID == 0 { //账户不存在
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account doest not exist",
 		})
 		return
-	} else {
+	}
+
+	//账户存在
+	if service.ID != 0 { //为客服账号
 		if strings.EqualFold(request.OperationType, "changPass") { //修改密码
-			var info = models.ClientInfo{
+			var info = models.ServiceInfo{
 				ClientAccount:request.Account,
 				ClientPassword:request.Value,
 			}
-			if err := c.Service.UpdateClientInfo(&info); err != nil {
+			if err := c.Service.UpdateServiceClientInfo(&info); err != nil {
 				_, _ = c.Ctx.JSON(models.BaseResponse{
 					Status:"2001",
-					Message:"Fail to update client's password",
+					Message:"Fail to update service's password",
 				})
 				return
 			}
 		} else { //修改账户姓名,则更新详细信息表
-			var profile = models.WebClient{
+			var info = models.ServiceInfo{
 				ClientAccount:request.Account,
 				ClientName:request.Value,
 			}
-			if err := c.Service.UpdateWebClientProfile(&profile); err != nil {
+			if err := c.Service.UpdateServiceClientInfo(&info); err != nil {
 				_, _ = c.Ctx.JSON(models.BaseResponse{
 					Status:"2001",
-					Message:"Fail to update client's name",
+					Message:"Fail to update service's name",
+				})
+				return
+			}
+		}
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2000",
+			Message:"Successful",
+		})
+		return
+	} else { //为医生账户
+		if strings.EqualFold(request.OperationType, "changPass") { //修改密码
+			var info = models.DoctorInfo{
+				ClientAccount:request.Account,
+				ClientPassword:request.Value,
+			}
+			if err := c.Service.UpdateDoctorClientInfo(&info); err != nil {
+				_, _ = c.Ctx.JSON(models.BaseResponse{
+					Status:"2001",
+					Message:"Fail to update doctor's password",
+				})
+				return
+			}
+		} else { //修改账户姓名,则更新详细信息表
+			var profile = models.DoctorInfo{
+				ClientAccount:request.Account,
+				ClientName:request.Value,
+			}
+			if err := c.Service.UpdateDoctorClientInfo(&profile); err != nil {
+				_, _ = c.Ctx.JSON(models.BaseResponse{
+					Status:"2001",
+					Message:"Fail to update doctor's name",
 				})
 				return
 			}
@@ -186,6 +193,8 @@ func (c *AdminController) ModifyClientAccount() {
 		})
 		return
 	}
+
+
 }
 
 //管理员修改医生信息
@@ -197,7 +206,7 @@ func (c *AdminController) ModifyDoctorProfile() {
 	}
 
 	//判断医生是否已经存在
-	if client := c.Service.SearchClientInfo(request.Account); client.ID == 0 {
+	if doctor := c.Service.SearchDoctorClientInfo(request.Account); doctor.ID == 0 {
 		_, _ = c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"Account doesn't exist",
@@ -206,7 +215,7 @@ func (c *AdminController) ModifyDoctorProfile() {
 	}
 
 	//添加详细信息
-	var profile = models.WebClient{
+	var profile = models.DoctorInfo{
 		ClientAccount:request.Account,
 		ClientName:request.Name,
 		ClientType:constants.ClientType_doctor,
@@ -214,7 +223,7 @@ func (c *AdminController) ModifyDoctorProfile() {
 		Brief:request.Brief,
 	}
 
-	if err := c.Service.UpdateWebClientProfile(&profile); err != nil {
+	if err := c.Service.UpdateDoctorClientInfo(&profile); err != nil {
 		_, _ =c.Ctx.JSON(models.BaseResponse{
 			Status:"2001",
 			Message:"failed to modify doctor profile",
@@ -236,24 +245,28 @@ func (c *AdminController) QueryService(){
 		log.Println("fail to encode request")
 		return
 	}
-	lecture:=c.ServiceStatistic.SelectLecturework(&request)
-	report:=c.ServiceStatistic.SelectReportwork(&request)
-	regist:=c.ServiceStatistic.SelectRegistwork(&request)
-	worker:=c.ServiceStatistic.WorkerList()
-	var statisticwork []models.ClientTotalWork
-	for i:= 0;i<len(worker);i++{
-		statisticwork[i].ClientAccount = worker[i].ClientAccount
-		statisticwork[i].ClientName = worker[i].ClientName
-		statisticwork[i].CountLecture = lecture[i].CountLecture
-		statisticwork[i].CountReport = report[i].CountReport
-		statisticwork[i].CountRegist = regist[i].CountRegist
+	lecture := c.ServiceStatistic.SelectLecturework(&request)
+	//report := c.ServiceStatistic.SelectReportwork(&request)
+	//regist := c.ServiceStatistic.SelectRegistwork(&request)
+	//client := c.ServiceStatistic.WorkerList()
+	var clientTotalWorks []models.ClientTotalWork
+	for _, worker := range lecture {
+		var clientTotalWork = models.ClientTotalWork{
+			ClientAccount:worker.ClientAccount,
+			ClientName:worker.ClientName,
+			CountLecture:worker.CountLecture,
+		}
+		clientTotalWorks = append(clientTotalWorks, clientTotalWork)
+		//clientTotalWorks[index].CountReport = report[index].CountReport
+		//clientTotalWorks[index].CountRegist = regist[index].CountRegist
 	}
+
 	var items []interface{}
-	for _, value := range statisticwork {
+	for _, value := range clientTotalWorks {
 		items = append(items, value)
 	}
 	_, _ = c.Ctx.JSON(models.WebsocketResponse{
-		Code: "2005 ",
+		Code: "2005",
 		Data: models.List{
 			Items: items,
 		},
