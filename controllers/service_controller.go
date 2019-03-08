@@ -6,6 +6,8 @@ import (
 	"HealthRobotServer/middleware"
 	"HealthRobotServer/models"
 	"HealthRobotServer/services"
+	"HealthRobotServer/util"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -13,6 +15,7 @@ import (
 	"github.com/kataras/iris/mvc"
 	"github.com/kataras/iris/websocket"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,13 +26,19 @@ type ServiceController struct {
 	Ctx iris.Context
 	Service services.ServiceService
 	WsManager manager.WSManager
-	CrManager manager.CRManager
 }
 
 func (c *ServiceController) BeforeActivation(b mvc.BeforeActivation)  {
 	b.Router().Use(middleware.JwtHandler().Serve, middleware.NewAuthToken().Serve)
 	b.Handle("POST","/changeDoctor","ModifyDoctorProfile")
 	b.Handle("POST","/setWebChat","AllocateDoctorForTreat")
+	b.Handle("POST","/ownRegist","OwnRegist")
+	b.Handle("POST","/getRegist","GetRegist")
+	b.Handle("POST","/postRegist","PostRegistResult")
+	b.Handle("POST","/postRegist","PostRegistResult")
+	b.Handle("POST","/uploadLecturetext","UploadLecturetext")
+	b.Handle("POST","/uploadLectureaudio","UploadLectureaudio")
+	b.Handle("POST","/uploadLecturevideo","UploadLecturevideo")
 }
 
 //客服修改医生信息
@@ -119,7 +128,11 @@ func (c *ServiceController) AllocateDoctorForTreat() {
 	//将语音连接请求发送给医生
 	dataForDoctor, _ := json.Marshal(models.WebsocketResponse{
 		Code:   "2011",
-		RoomID: RoomID ,
+		WebResponse:models.WebResponse{
+			TreatResponse:models.TreatResponse{
+				RoomID: RoomID ,
+			},
+		},
 	})
 	if err := (*DoctorConn).Write(1, dataForDoctor); err != nil {
 		log.Println("Fail to Send Call to Doctor")
@@ -137,14 +150,16 @@ func (c *ServiceController) AllocateDoctorForTreat() {
 
 	//把语音通话房间号返回给机器人
 	dataForPatient, _ := json.Marshal(models.WebsocketResponse{
+		Status:"2000",
+		Message:"",
 		RobotResponse:models.RobotResponse{
 			Account:allocation.Patient,
 			UniqueID:"",
 			ClientType:"robot",
+			TreatResponse:models.TreatResponse{
+				RoomID:RoomID,
+			},
 		},
-		Status:"2000",
-		Message:"",
-		RoomID:RoomID,
 	})
 	_ = (*PatientConn).Write(1,dataForPatient)
 
@@ -166,4 +181,315 @@ func (c *ServiceController) SendOnlineDoctorList(conn websocket.Connection) {
 	log.Printf("OnlineDoctorList: %s", data)
 	_ = conn.To("service").EmitMessage(data)
 }
+
+// 客服抢挂号单,查询该客服是否能够抢挂号单
+func (c *ServiceController) OwnRegist() {
+	var req models.RegistProcessRequest
+	err := c.Ctx.ReadJSON(&req)
+	if err != nil {
+		log.Println("fail to encode request, ", err)
+		return
+	}
+
+	idle, mes := c.Service.QueryRegistrationIdle(req.ID, req.HandleSevice)
+
+	if !idle {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2001",
+			Message:mes,
+		})
+
+	} else {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:  "2000",
+			Message: mes,
+		})
+	}
+}
+
+// web端：客服待完成挂号单
+func (c *ServiceController) GetRegist() {
+	log.Println("GetRegist() ")
+
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	ServiceAccount := claims["Account"].(string)
+
+	registration := c.Service.QueryRegistrationProcessing(ServiceAccount)
+
+	if registration.ID == 0 {
+		log.Println("无待完成挂号单")
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2001",
+			Message:"无待完成挂号单",
+		})
+	} else {
+		_, _ = c.Ctx.JSON(iris.Map{
+			"status":      "2000",
+			"id":          registration.ID,
+			"userName":    "",
+			"userAccount": registration.UserAccount,
+			"class":       registration.Regist.Province + registration.Regist.City + registration.Regist.Hospital + registration.Regist.Department,
+			"others":      "",
+		})
+	}
+}
+
+// 客服挂号反馈
+func (c *ServiceController) PostRegistResult() {
+	var result models.RegistProcessResponse
+	err := c.Ctx.ReadJSON(&result)
+	if err != nil && !iris.IsErrPath(err) {
+		log.Println("fail to encode request")
+		return
+	}
+
+	if err := c.Service.SaveRegistResult(&result); err != nil {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2001",
+			Message:"账号不存在",
+		})
+		return
+	}
+	_, _ = c.Ctx.JSON(models.BaseResponse{
+		Status:"2000",
+		Message:"成功",
+	})
+
+	//把挂号结果反馈给用户
+	robotAccount := c.Service.SearchRegistByID(result.ID).UserAccount
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0018",
+		RobotResponse:models.RobotResponse{
+			MessageNotice: models.MessageNotice {
+				MessageType: "2",
+				MessageID: result.ID,
+				UserAccount:robotAccount,
+			},
+		},
+	})
+	RobotConn := c.WsManager.GetWSConnection(robotAccount)
+	if RobotConn == nil {
+		println("用户下线，挂号结果反馈失败")
+		return
+	}
+	_ = (*RobotConn).Write(1,data)
+}
+
+// 根据提交的表单创建体检推荐信息并添加到数据库
+func (c *ServiceController) SaveRecommendation() {
+	log.Println("Service SaveRecommendation()")
+
+	//解析用户上传的表单文件
+	file, info, err := c.Ctx.FormFile("file")
+	if err != nil {
+		log.Println("Uploading file Error: ", err)
+		return
+	}
+	form := c.Ctx.Request().MultipartForm
+
+	//保存用户上传的推荐到本地目录
+	fileUrl, err := util.SaveFileUploaded("/uploads/", info.Filename, &file)
+	log.Println(fileUrl)
+	//Base64编码
+	cover :=util.GetBase64Frame(fileUrl)
+
+	// 校验函数，校验提交的数据是否满足要求
+	if len(form.Value["title"][0]) == 0 || len(form.Value["text"][0]) == 0 {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2001",
+			Message:"题目和具体内容不能为空",
+		})
+		return
+	}
+
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	ServiceAccount := claims["Account"].(string)
+
+	recommend := &models.PhysicalExamine{
+		Title: form.Value["title"][0],
+		Abstract: form.Value["blief"][0],
+		Infor: form.Value["text"][0],
+		Cover: cover,
+		HandleSevice: ServiceAccount,
+	}
+
+	log.Printf("recommend is : %v", recommend)
+
+	// 数据库操作
+	if err := c.Service.CreatePhysicalExamine(recommend); err != nil {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status:"2001",
+			Message:"创建体检推荐失败",
+		})
+		return
+	}
+
+	_, _ = c.Ctx.JSON(models.BaseResponse{
+		Status:"2000",
+		Message:"",
+	})
+
+	//将体检推荐推送到所有的用户
+	message := models.MessageNotice{
+		MessageType: "0",
+		MessageID: c.Service.GetTheNewExamine().ID,
+		UserAccount:"",
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0018",
+		RobotResponse:models.RobotResponse{
+			MessageNotice:message,
+		},
+	})
+	Conn := c.WsManager.GetWSConnection(ServiceAccount)
+	_ = (*Conn).To("robot").EmitMessage(data)
+	return
+
+}
+
+//客服上传文本健康讲座
+func (c *ServiceController) UploadLecturetext() {
+	var request models.TextLectureUploadRequest
+	if err := c.Ctx.ReadJSON(request); err != nil{
+		log.Println("encode request fail, ", err)
+		return
+	}
+
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	service := claims["Account"].(string)
+
+	var lecture = models.LectureInfo {
+		Title:request.Title,
+		Abstract:request.Blief,
+		Content:request.Text,
+		Filetype:1,
+		HandleService:service,
+	}
+
+	err := c.Service.InsertLecture(&lecture)
+	if err  != nil {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2001",
+			Message: "insert error",
+		})
+	}else{
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2000",
+			Message: "success",
+		})
+	}
+}
+
+//客服上传音频版健康讲座
+//解析并存储上传的音频文件
+func (c *ServiceController)GetAudioFile(filetype int)*models.LectureInfo{
+	const maxSize = 50 << 20 // 50MB
+
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	service := claims["Account"].(string)
+
+	var lecture models.LectureInfo
+
+	file, info, err := c.Ctx.FormFile("file")
+	form := c.Ctx.Request().MultipartForm
+	title := form.Value["title"][0]
+	blief := form.Value["blief"][0]
+
+	lecture.Filetype = filetype
+	lecture.Title = title
+	lecture.Abstract = blief
+	lecture.HandleService = service
+	lecture.Filename, err = util.SaveFileUploaded("/uploads/lecture/audio/",info.Filename, &file)
+
+	//音频文件默认展示图片logo.jpg
+	//该操作为转换默认展示图片的base64码，类型为string
+	filename :="http://localhost:8080/uploads/audio/logo.jpg"
+	picture, err := os.Open(filename)
+	if err != nil {
+		log.Println("获取logo图片失败, ", err)
+	}
+	defer picture.Close()
+
+	fileInfo, err := picture.Stat()
+	if err != nil {
+		log.Println("解析logo图片失败, ", err)
+	}
+	fileSize := fileInfo.Size()
+	buffer := make([]byte, fileSize)
+
+	if _, err := picture.Read(buffer); err != nil {
+		log.Println(err)
+	}
+	lecture.Cover = base64.StdEncoding.EncodeToString(buffer)
+
+	return &lecture
+}
+
+func (c *ServiceController) UploadLectureaudio() {
+	lecture :=c.GetAudioFile(2)
+	err :=c.Service.InsertLecture(lecture)
+	if err !=nil {
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2001 ",
+			Message:   "insert error",
+		})
+	}else{
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2000 ",
+			Message: "success",
+		})
+
+	}
+}
+
+//客服上传视频版健康讲座
+func (c *ServiceController) UploadLecturevideo() {
+	lecture := c.GetVideoFile(3)
+	status :=c.Service.InsertLecture(lecture)
+	if status !=nil{
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2001 ",
+			Message:   "insert error",
+		})
+	}else{
+		_, _ = c.Ctx.JSON(models.BaseResponse{
+			Status: "2000 ",
+			Message: "success",
+		})
+
+	}
+}
+//解析并存储上传的视频文件至uploads文件夹中
+func (c *ServiceController)GetVideoFile(filetype int) *models.LectureInfo{
+	const maxSize = 50 << 20 // 50MB
+
+	token := c.Ctx.Values().Get("jwt").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	service := claims["Account"].(string)
+
+	lecture := &models.LectureInfo{}
+
+	file, info, err := c.Ctx.FormFile("file")
+	form := c.Ctx.Request().MultipartForm
+	// 获取其他参数
+	title := form.Value["title"][0]
+	blief := form.Value["blief"][0]
+	lecture.Filetype = filetype
+	lecture.Title = title
+	lecture.Abstract = blief
+	lecture.HandleService = service
+	lecture.Filename, err = util.SaveFileUploaded("/uploads/lecture/video/",info.Filename,&file)
+
+	log.Println("保存视频讲座失败, ", err)
+
+	lecture.Cover = util.GetBase64Frame(lecture.Filename)
+	return lecture
+}
+
+
+
 

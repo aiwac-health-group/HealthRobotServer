@@ -79,3 +79,18 @@ func (d* Dao) Update(item interface{}, tableName string, query string, condition
 	log.Println("dboperation.go Update() update successfully")
 	return nil
 }
+
+func (d *Dao) GetAllList(result interface{}, tableName string) {
+	d.Engine.Table(tableName).Find(result)
+	if result == nil {
+		log.Println("dboperation.go GetList() no match query")
+	}
+}
+
+func (d *Dao) SearchLast(result interface{},tableName string, query string, condition...interface{}) error {
+	err := d.Engine.Table(tableName).Where(query, condition...).Last(result).Error
+	if err != nil {
+		log.Println("dboperation.go Search() no match query: ", err)
+	}
+	return err
+}

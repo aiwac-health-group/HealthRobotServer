@@ -24,6 +24,7 @@ func newApp() (api *iris.Application) {
 	api.RegisterView(iris.HTML("./view",".html"))
 	//静态文件支持
 	api.StaticWeb("/static", "./static")
+	api.StaticWeb("/uploads", "./uploads")
 
 	mvc.Configure(api.Party("/login"), func(app *mvc.Application) {
 		app.Register(services.NewLoginService())
@@ -31,19 +32,20 @@ func newApp() (api *iris.Application) {
 	})
 
 	mvc.Configure(api.Party("/admin"), func(app *mvc.Application) {
+		app.Register(services.NewStatisticService())
 		app.Register(services.NewClientService())
 		app.Handle(new(controllers.AdminController))
 	})
 
 	mvc.Configure(api.Party("/service"), func(app *mvc.Application) {
 		app.Register(manager.WSInstance())
-		app.Register(manager.CRInstance())
 		app.Register(services.NewServiceService())
 		app.Handle(new(controllers.ServiceController))
 	})
 
 	mvc.Configure(api.Party("/doctor"), func(app *mvc.Application) {
-		app.Register(services.NewClientService())
+		app.Register(services.NewDoctorService())
+		app.Register(manager.WSInstance())
 		app.Handle(new(controllers.DoctorController))
 	})
 

@@ -17,8 +17,22 @@ import (
 )
 
 const (
-	BusinessRobotProfile = 6
+	BusinessRobotProfile = 6 //机器人注册或修改账号信息
+	BussinessExamBlief = 7 //机器人发起体检摘要查询
+	BussinessExamInfo = 8 //机器人发起体检详细信息查询
+	BusinessLectureAudioAbstract = 9  //健康讲座视频摘要查询
+	BusinessLectureVideoAbstract = 10  //健康讲座视频摘要查询
+	BusinessLectureFileContent  = 11  //健康讲座音频和视频详情查询
+	BusinessLectureTextAbstract = 12  //健康讲座文本摘要查询
+	BusinessLectureTextContent  = 13  //健康讲座文本详情查询
+	BussinessReportInfo = 15 //机器人用户发起的健康检测结果详细信息查询
+	BussinessSkinUpload = 16 //安卓端上传测肤结果
 	BusinessTreatRequest = 17 //机器人发起问诊请求
+	BussinessRegistRequest = 19 //机器人进行在线挂号
+	BussinessRegistRecord = 20 //机器人查询挂号历史记录
+	BussinessRegistResult = 21 //机器人查询挂号结果
+	BussinessExamPackage = 22 //机器人获取体检套餐文档
+	Bussiness3NewExam = 23 //机器人查询体检推荐最新三条数据
 	BusinessTreatHangOut = 24 //机器人挂断问诊请求
 	BusinessOnlineDoctor = 2009 //客服获取在线医生列表
 	BusinessTreatList = 2010 //客服获取待问诊列表
@@ -137,13 +151,25 @@ func (c *WebsocketController) ReceiveRequest(data []byte) {
 
 	switch businessCode {
 	case BusinessRobotProfile: c.RobotProfileHandler(&request)
+	case BussinessExamBlief: c.QueryExamineBliefHandler(&request)
+	case BussinessExamInfo: c.QueryExamineHandler(&request)
+	case BussinessSkinUpload: c.SaveSkinTestHandler(&request)
+	case BusinessLectureAudioAbstract: c.LectureAudioAbstractHandler(&request)
+	case BusinessLectureVideoAbstract: c.LectureVideoAbstractHandler(&request)
+	case BusinessLectureTextAbstract:  c.LectureTextAbstractHandler(&request)
+	case BusinessLectureTextContent:   c.LectureTextContentHandler(&request)
+	case BusinessLectureFileContent:   c.LectureTextContentHandler(&request)
 	case BusinessTreatRequest: c.TreatRequestHandler(&request)
 	case BusinessTreatHangOut: c.TreatHangOutHandler(&request)
+	case BussinessRegistRequest:c.RegistRequestHandler(&request)
 	case BusinessOnlineDoctor: c.DoctorListRequestHandler(&request)
 	case BusinessTreatList: c.TreatWaitListHandler(&request)
 	case BusinessDoctorHangOut: c.DoctorHangOutHandler(&request)
 	case BusinessDoctorRejectCall: c.DoctorRejectCallHandler(&request)
-
+	case BussinessRegistRecord:c.QueryRegistRecordHandler(&request)
+	case BussinessRegistResult: c.QueryRegistResultHandler(&request)
+	case BussinessExamPackage: c.GetExaminePackage(&request)
+	case Bussiness3NewExam: c.Get3NewExamineList(&request)
 	}
 }
 
@@ -203,6 +229,241 @@ func (c *WebsocketController) RobotProfileHandler(request *models.WSRequest) {
 	return
 }
 
+//0007号业务处理
+//机器人用户发起的体检推荐摘要查询
+func (c *WebsocketController) QueryExamineBliefHandler(request *models.WSRequest) {
+	var list []models.PhysicalExamine
+	list = c.Service.GetAllExamine()
+	var items []interface{}
+	for _, value := range list{
+		items = append(items, iris.Map{
+			"examID": value.ID,
+			"name": value.Title,
+			"description": value.Abstract,
+			"updateTime": value.UpdatedAt,
+			"cover": value.Cover,
+		})
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Status: "2000",
+		Code: "0007",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("ExamineList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0008号业务处理
+//机器人用户发起的体检推荐详情查询
+func (c *WebsocketController) QueryExamineHandler(request *models.WSRequest) {
+	examine := c.Service.SearchExamineInfo(request.ExamID)
+
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Status: "2000",
+		Code: "0008",
+		RobotResponse:models.RobotResponse{
+			ExamineResponse:models.ExamineResponse{
+				Examine: examine.Infor,
+			},
+		},
+	})
+	log.Printf("Examine: %s", data)
+	_ = c.Conn.Write(1, data)
+}
+
+//0009号业务处理
+//获取音频课程摘要
+func(c *WebsocketController) LectureAudioAbstractHandler(request *models.WSRequest){
+	lectures := c.Service.GetLectureFileAbstractList(constants.Lecture_audio)
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0009",
+		Status:"2000",
+		Message:"Successful",
+		Data: models.List{
+			Items: items,
+		},
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0010号业务处理
+//获取视频课程摘要
+func(c *WebsocketController) LectureVideoAbstractHandler(request *models.WSRequest){
+	lectures := c.Service.GetLectureFileAbstractList(constants.Lecture_video)
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0010",
+		Status:"2000",
+		Message:"string",
+		Data: models.List{
+			Items: items,
+		},
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0011号业务处理
+//获取音视频讲座内容
+func(c *WebsocketController) LectureFileContentHandler(request *models.WSRobotRequest){
+	lectures := c.Service.GetLectureFileContent(request.LectureID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0011",
+		Status:"2000",
+		Message:"string",
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+			LectureResponse:models.LectureResponse{
+				Link:lectures.Filename,
+			},
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0012号业务处理
+//获取文本讲座摘要
+func(c *WebsocketController) LectureTextAbstractHandler(request *models.WSRequest){
+	lectures := c.Service.GetLectureTextAbstractList()
+	var items []interface{}
+	for _, value := range lectures {
+		items = append(items, value)
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0012",
+		Status:"2000",
+		Message:"string",
+		Data: models.List{
+			Items: items,
+		},
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0013号业务处理
+//获取文本讲座内容
+func(c *WebsocketController) LectureTextContentHandler(request *models.WSRequest) {
+
+	lectures := c.Service.GetLectureTextContent(request.LectureID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0013",
+		Status:"2000",
+		Message:"string",
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+			LectureResponse:models.LectureResponse{
+				LectureContext:lectures.Content,
+			},
+		},
+	})
+	log.Printf("lectureList: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0015号业务处理
+//机器人用户发起的健康检测结果详细信息查询
+func (c *WebsocketController) QueryReportHandler(request *models.WSRequest) {
+	report := c.Service.GetReportByID(request.ReportID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0015",
+		Status:"2000",
+		Message:"Successful",
+		RobotResponse:models.RobotResponse{
+			Account: request.Account,
+			ClientType: request.ClientType,
+			UniqueID: request.UniqueID,
+			HealthReportResponse:models.HealthReportResponse{
+				Report:report.Report,
+			},
+		},
+	})
+	log.Printf("Report: %s", data)
+	_ = c.Conn.Write(1, data)
+
+}
+
+//0016号业务处理
+//安卓端测肤结果上传
+func (c *WebsocketController) SaveSkinTestHandler(request *models.WSRequest) {
+	//判断账号是否存在
+	if client := c.Service.SearchRobotClientInfo(request.Account); client.ID == 0 {
+		data, _ := json.Marshal(models.WebsocketResponse{
+			Code:"0006",
+			Status:"2001",
+			Message:"the robot doesn't exist",
+			RobotResponse:models.RobotResponse{
+				Account:ws_account,
+				UniqueID:"",
+			},
+		})
+		_ = c.Conn.Write(1,data)
+		return
+	}
+
+	var skinInfo = models.SkinTest{
+		UserAccount: request.Account,
+		FaceURL: request.PicURL,
+		SkinDesc: request.Result,
+	}
+
+	if err := c.Service.CreateSkinInfo(&skinInfo); err != nil {
+		data, _ := json.Marshal(models.WebsocketResponse{
+			Code:"0016",
+			Status:"2001",
+			Message:"system error",
+			RobotResponse:models.RobotResponse{
+				Account:ws_account,
+				UniqueID:"",
+			},
+		})
+		_ = c.Conn.Write(1,data)
+		return
+	}
+
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code:"0016",
+		Status:"2000",
+		Message:"Upload skin result successfully",
+		RobotResponse:models.RobotResponse{
+			Account:ws_account,
+			UniqueID:"",
+		},
+	})
+	_ = c.Conn.Write(1,data)
+	return
+}
+
 //17号业务处理
 //处理用户发起的问诊请求
 //把问诊请求存进数据库，并把等待列表推送给在线客服
@@ -216,6 +477,154 @@ func (c *WebsocketController) TreatRequestHandler(request *models.WSRequest) {
 
 	//把正在等待的问诊请求列表推送给客服
 	c.PushTreatWaitList()
+}
+
+//0019号业务处理
+//机器人用户发起在线挂号
+//把挂号信息存入数据库，并把等待挂号列表更新给在线客服
+func (c *WebsocketController) RegistRequestHandler(request *models.WSRequest) {
+	err := c.Service.CreateRegistInfo(&models.Registration{
+		UserAccount: ws_account,
+		Regist: request.Regist,
+		Status: constants.Status_noresponse,
+	})
+	if err != nil {
+		log.Println("接收挂号请求失败: ", err)
+		data, _ := json.Marshal(models.WebsocketResponse{
+			Code:"0019",
+			Status:"2001",
+			Message:"挂号失败，系统错误",
+			RobotResponse:models.RobotResponse{
+				Account:ws_account,
+				UniqueID:"",
+				ClientType:constants.ClientType_robot,
+			},
+		})
+		_ = c.Conn.Write(1, data)
+	} else {
+		log.Println("接收挂号请求成功: ", err)
+		data, _ := json.Marshal(models.WebsocketResponse{
+			Code:"0019",
+			Status:"2000",
+			Message:"挂号成功",
+			RobotResponse:models.RobotResponse{
+				Account:ws_account,
+				UniqueID:"",
+				ClientType:constants.ClientType_robot,
+			},
+		})
+		_ = c.Conn.Write(1, data)
+	}
+	c.PushOnlineRegistList()
+}
+
+//0020号业务处理
+//机器人用户查询挂号历史记录
+func (c *WebsocketController) QueryRegistRecordHandler(request *models.WSRequest) {
+	list := c.Service.SearchRegistByUser(ws_account)
+
+	if len(list) == 0 {
+		data, _ := json.Marshal(models.WebsocketResponse{
+			Code: "0020",
+			Status: "2001",
+			Message: "该用户无挂号记录",
+		})
+		_ = c.Conn.Write(1,data)
+		return
+	}
+
+	var items []interface{}
+	for _, value := range list{
+		items = append(items, iris.Map{
+			"registerID": value.ID,
+			"province": value.Province,
+			"city": value.City,
+			"hospital": value.Hospital,
+			"department": value.Department,
+			"registerStatus": value.Status,
+			"description": value.RegistDesc,
+			"createTime": value.CreatedAt,
+			"updateTime": value.UpdatedAt,
+		})
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0020",
+		Status: "2000",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("registRecord: %s", data)
+	_ = c.Conn.Write(1,data)
+}
+
+//0021号业务处理
+//机器人用户使用挂号ID查询挂号结果
+func (c *WebsocketController) QueryRegistResultHandler(request *models.WSRequest) {
+	registInfo := c.Service.SearchRegistByID(request.RegisterID)
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "0021",
+		Status:"2000",
+		Message:"返回挂号结果",
+		RobotResponse: models.RobotResponse {
+			Account:ws_account,
+			ClientType:constants.ClientType_robot,
+			UniqueID:"",
+			RegistResponse: models.RegistResponse {
+				Description: registInfo.RegistDesc,
+				RegisterStatus: registInfo.Status,
+				RegistInfo: models.Regist{
+					Province: registInfo.Province,
+					City: registInfo.City,
+					Hospital: registInfo.Hospital,
+					Department: registInfo.Department,
+				},
+				UpdateTime: registInfo.UpdatedAt,
+				CreateTime: registInfo.CreatedAt,
+			},
+		},
+	})
+	log.Printf("Regist result: %s", data)
+	_ = c.Conn.Write(1, data)
+}
+
+//0022号业务处理
+//安卓端从服务器拉去体检套餐文档
+func (c *WebsocketController) GetExaminePackage(request *models.WSRequest) {
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Status: "2000",
+		Code: "0008",
+		RobotResponse:models.RobotResponse{
+			ExamineResponse:models.ExamineResponse{
+				ExaminePackage:constants.ExaminePackageLink,
+			},
+		},
+	})
+	log.Printf("ExaminePackage: %s", data)
+	_ = c.Conn.Write(1, data)
+}
+
+//0023号业务处理
+//机器人用户查询体检推荐最新三条数据
+func (c *WebsocketController) Get3NewExamineList(request *models.WSRequest) {
+	var list []models.PhysicalExamine
+	list = c.Service.Get3NewExamine()
+	var items []interface{}
+	for _, value := range list{
+		items = append(items, iris.Map{
+			"examID": value.ID,
+			"cover": value.Cover,
+		})
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Status: "2000",
+		Code: "0023",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("3NewExamineList: %s", data)
+	_ = c.Conn.Write(1,data)
 }
 
 //24号业务处理
@@ -237,6 +646,61 @@ func (c *WebsocketController) TreatHangOutHandler(request *models.WSRequest) {
 	c.PushOnlineDoctorList()
 }
 
+//2008号业务处理
+//推送挂号列表至所有客服
+func (c *WebsocketController) PushOnlineRegistList() {
+	list := c.Service.GetNonresponseRegist()
+	var items []interface{}
+	for _, value := range list {
+		info := c.Service.SearchRobotClientInfo(value.UserAccount)
+		userName := info.ClientName
+		items = append(items, iris.Map{
+			"id": value.ID,
+			"account": value.UserAccount,
+			"name": userName ,
+			"class": value.Province + value.City + value.Hospital + value.Department,
+			"others": "",
+		})
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "2008",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("registWaitList: %s", data)
+	_ = c.Conn.To("service").EmitMessage(data)
+}
+//获取待挂号列表
+func (c *WebsocketController) SendOnlineRegistList() {
+	list := c.Service.GetNonresponseRegist()
+	var items []interface{}
+	for _, value := range list {
+		info := c.Service.SearchRobotClientInfo(value.UserAccount)
+		userName := info.ClientName
+		items = append(items, iris.Map{
+			"id": value.ID,
+			"account": value.UserAccount,
+			"name": userName ,
+			"class": value.Province + value.City + value.Hospital + value.Department,
+			"others": "",
+		})
+	}
+	data, _ := json.Marshal(models.WebsocketResponse{
+		Code: "2008",
+		Data: models.List{
+			Items: items,
+		},
+	})
+	log.Printf("registWaitList: %s", data)
+	_ = c.Conn.Write(1, data)
+}
+func (c *WebsocketController) GetRegistWaitListHandler(request *models.WSRequest) {
+	if !strings.EqualFold(request.Message, "getServiceOnlineList") {
+		return
+	}
+	c.SendOnlineRegistList()
+}
 
 //2009号业务处理
 //推送列表至客服
@@ -255,7 +719,6 @@ func (c *WebsocketController) PushOnlineDoctorList() {
 	log.Printf("OnlineDoctorList: %s", data)
 	_ = c.Conn.To("service").EmitMessage(data)
 }
-
 //获取在线医生列表
 func (c *WebsocketController) GetOnlineDoctorList() {
 	doctors := c.Service.GetOnlineDoctor()
@@ -272,7 +735,6 @@ func (c *WebsocketController) GetOnlineDoctorList() {
 	log.Printf("OnlineDoctorList: %s", data)
 	_ = c.Conn.Write(1,data)
 }
-
 func (c *WebsocketController) DoctorListRequestHandler(request *models.WSRequest) {
 	if strings.EqualFold(request.Message, " getDoctorList ") {
 		println("getDoctorList")

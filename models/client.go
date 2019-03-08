@@ -55,7 +55,7 @@ type RobotInfo struct {
 
 //机器人列表项视图
 type RobotItem struct {
-	ClientAccount string `json:"clientID"`
+	ClientAccount string `gorm:"column:client_account;type:varchar(11);not null;" json:"clientID"`
 }
 
 
