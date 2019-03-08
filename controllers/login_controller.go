@@ -8,6 +8,7 @@ import (
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -16,10 +17,13 @@ type LoginController struct {
 	Service services.LoginService
 }
 
+var IdentifyCode string
+
 func (c *LoginController) BeforeActivation(b mvc.BeforeActivation)  {
 	b.Handle("GET","/","Welcome")
 	b.Handle("POST","/","LoginWithPassword")
-	//b.Handle("POST", "/loginWithIdentifyCode", "LoginWithIdentifyCode")
+	b.Handle("POST", "/getIdentifyCode", "GetIdentifyCode")
+	b.Handle("POST", "/loginWithIdentifyCode", "LoginWithIdentifyCode")
 	b.Handle("GET","/getTokenString","GetAccessToken")
 }
 
@@ -97,6 +101,47 @@ func (c *LoginController) LoginWithPassword() {
 	}
 	return
 
+}
+
+//机器人获取验证码
+func (c *LoginController) GetIdentifyCode() {
+	var request models.LoginRequest
+	if err := c.Ctx.ReadJSON(&request); err != nil {
+		log.Println("fail to encode request")
+		return
+	}
+
+	IdentifyCode = strconv.Itoa(c.Service.GenerateIdentifyCode())
+	_ = c.Service.SendIdentifyCodeToPhone(request.Account, IdentifyCode)
+}
+
+//机器人根据验证码登录
+func (c *LoginController) LoginWithIdentifyCode() {
+	var request models.LoginRequest
+	if err := c.Ctx.ReadJSON(&request); err != nil {
+		log.Println("fail to encode request")
+		return
+	}
+
+	if strings.EqualFold(request.IdentifyCode, IdentifyCode) { //验证成功
+		//生成token返回至用户,并更新数据库中的token
+		tokenString := middleware.GenerateToken(request.Account, "robot")
+		_, _ = c.Ctx.JSON(models.TokenResponse{
+			BaseResponse:models.BaseResponse{
+				Status:"2000",
+				Message:"Login Successful",
+			},
+			Token:tokenString,
+		})
+	} else {
+		_, _ = c.Ctx.JSON(models.TokenResponse{
+			BaseResponse:models.BaseResponse{
+				Status:"2001",
+				Message:"Wrong IdentifyCode",
+			},
+			Token:"",
+		})
+	}
 }
 
 //用于机器人APP获取Token以免登陆
